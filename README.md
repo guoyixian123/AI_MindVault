@@ -4,14 +4,17 @@
 个人法律智能体
 
 #### 软件架构
-本项目采用单体架构
+本项目采用单体架构设计   
+技术栈:java,langchain4j,ssm,springboot,redis(向量化数据存储)
+
+![样图1](%E6%88%AA%E5%B1%8F2026-03-27%2022.23.12.png)
+![样图2](%E6%88%AA%E5%B1%8F2026-03-27%2016.59.03.png)
+
+技术栈:java,langchain4j,ssm,springboot,redis(向量化数据存储)
 
 ![流程图](https://foruda.gitee.com/images/1774620980989000430/459f8b28_14210770.png "屏幕截图")
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
 
 #### 使用说明
 
