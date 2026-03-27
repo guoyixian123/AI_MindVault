@@ -1,0 +1,17 @@
+# 忽略 IDEA 配置
+.idea/
+
+
+# 忽略 Maven 编译输出（递归所有模块的 target 目录）
+target/
+AI_mindVault/
+application.yml
+
+.test/
+
+*/.mvn/
+*.json
+*.iml
+*.DS_Store
+
+**/test/
