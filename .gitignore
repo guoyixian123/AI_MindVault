@@ -6,7 +6,7 @@
 target/
 AI_mindVault/
 application.yml
-
+**/content/
 .test/
 
 */.mvn/
