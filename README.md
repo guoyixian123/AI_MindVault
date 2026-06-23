@@ -1,114 +1,119 @@
-# ai_major
+# AI_MindVault - 法律智能助手
 
-## 项目介绍
-
-这是一个基于 **LangChain4j** 做的个人法律智能助手，核心思路是用 **RAG（检索增强生成）** 来提升回答的准确性，尽量减少大模型“胡说”的情况。
-
-项目支持流式输出、会话隔离和会话记忆持久化，同时把本地法律资料做向量化存到 Redis 里，用来做语义检索。
-
-整体上不局限于法律场景，通过改 system 角色和知识库，也可以扩展成医生、金融顾问之类的智能体。
-![输入图片说明](print/%E6%88%AA%E5%B1%8F2026-03-27%2022.23.12.png)
-![输入图片说明](print/%E6%88%AA%E5%B1%8F2026-03-27%2022.24.02.png)
-
----
+基于 LangChain4j + RAG 的个人法律智能助手，支持流式输出、会话管理和知识库检索。
 
 ## 技术栈
 
-* Java
-* Spring Boot
-* SSM（Spring + SpringMVC + MyBatis）
-* LangChain4j
-* Redis（向量存储）
-整体采用单体架构
-![输入图片说明](print/%E6%88%AA%E5%B1%8F2026-03-27%2023.19.16.png)
----
+- Java 21
+- Spring Boot 3.5.12
+- LangChain4j 1.0.1-beta6
+- MyBatis-Plus 3.5.7
+- MySQL 8.0+
+- Redis (Redis Stack)
+- Vue 3
 
-## 功能大致覆盖
+## 快速开始
 
-### 劳动相关
+### 1. 环境准备
 
-* 劳动合同是否合法（试用期、竞业限制这些）
-* 工资拖欠、加班费怎么维权
-* 被辞退时 N+1 / 2N 怎么算，仲裁有没有过期
+- JDK 21+
+- MySQL 8.0+
+- Redis Stack (支持向量存储)
+- 通义千问 API Key (或其他 OpenAI 兼容模型)
 
-### 消费维权
+### 2. 配置文件
 
-* 七天无理由退货哪些能用、哪些不行
-* 预付卡退费（餐饮、医美、培训）
-* 直播带货虚假宣传怎么留证据
+复制配置模板并填入真实配置：
 
-### 民间借贷
+```bash
+cd major_ai/src/main/resources
+cp application.yml.example application.yml
+```
 
-* 借条/欠条怎么写才有效
-* 利息怎么算（LPR 四倍）
-* 微信转账没有备注怎么补证据
+编辑 `application.yml`，填入：
+- MySQL 连接信息
+- Redis 连接信息
+- API Key
 
-### 婚恋家事
+### 3. 创建数据库
 
-* 彩礼什么情况下可以要回来
-* 婚内借款算不算个人债务
-* 抚养权一般看哪些证据
+```sql
+CREATE DATABASE ai_mindvault DEFAULT CHARACTER SET utf8mb4;
+USE ai_mindvault;
 
----
+-- 执行 schema.sql 中的建表语句
+```
 
-## 核心设计
+### 4. 启动应用
 
-### 1. system 角色
+```bash
+cd major_ai
+mvn spring-boot:run
+```
 
-可以自己定义 AI 的角色，比如法律顾问、医生、理财顾问等等。
-修改路径下的system即可
-![输入图片说明](print/%E6%88%AA%E5%B1%8F2026-03-27%2022.36.17.png)
-### 2. RAG 知识库
+访问 http://localhost:8080
 
-把数据放在 `content/` 目录里，做向量化后存进 Redis，用来做检索。
-这样 AI 回答会更贴近真实资料,可以防止ai幻觉，而不是纯靠模型生成。
-![输入图片说明](print/%E6%88%AA%E5%B1%8F2026-03-27%2022.40.30.png)
----
+## 功能特性
 
-## 使用说明
+- ✅ AI 法律咨询（流式输出）
+- ✅ 会话管理（创建/切换/删除）
+- ✅ 聊天记录持久化（MySQL）
+- ✅ RAG 知识库检索（Redis 向量存储）
+- ✅ 响应式前端界面
 
-### 1. 配置
+## 项目结构
 
-在 yml 里填好：
+```
+major_ai/
+├── src/main/java/org/example/major_ai/
+│   ├── MajorAiApplication.java          # 启动类
+│   ├── controller/                      # 控制器
+│   ├── service/                         # 服务层
+│   ├── mapper/                          # MyBatis Mapper
+│   ├── entity/                          # 实体类
+│   ├── config/                          # 配置类
+│   └── aiservice/                       # AI 服务接口
+└── src/main/resources/
+    ├── application.yml.example          # 配置模板
+    ├── schema.sql                       # 数据库表结构
+    ├── system.txt                       # AI 系统提示词
+    └── static/                          # 前端页面
+```
 
-* API Key
-* 模型地址
-* 模型名称
+## 配置说明
 
-![输入图片说明](print/%E6%88%AA%E5%B1%8F2026-03-27%2022.59.31.png)
----
+### 环境变量
 
-### 2. 环境准备
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| QWEN_API_KEY | 通义千问 API Key | - |
+| MYSQL_HOST | MySQL 主机 | localhost |
+| MYSQL_PORT | MySQL 端口 | 3306 |
+| MYSQL_DATABASE | 数据库名 | ai_mindvault |
+| MYSQL_USERNAME | MySQL 用户名 | root |
+| MYSQL_PASSWORD | MySQL 密码 | - |
+| REDIS_HOST | Redis 主机 | localhost |
+| REDIS_PORT | Redis 端口 | 6379 |
+| REDIS_PASSWORD | Redis 密码 | - |
 
-需要安装 Redis Stack（支持向量存储）
+### 切换模型
 
----
+修改 `application.yml` 中的 `base-url` 和 `model-name`：
 
-### 3. 数据处理
+```yaml
+# DeepSeek
+base-url: https://api.deepseek.com/v1
+model-name: deepseek-chat
 
-把 `content/` 里的数据做向量化存进 Redis
+# OpenAI
+base-url: https://api.openai.com/v1
+model-name: gpt-4o
 
-注意：
-向量化做完之后可以把相关 `@Bean` 注释掉，不然每次启动都会重新跑，比较浪费 token。
+# 本地 Ollama
+base-url: http://localhost:11434/v1
+model-name: qwen2.5
+```
 
-rag数据可以从这里找：
-[https://modelscope.cn/datasets](https://modelscope.cn/datasets)
+## 许可证
 
----
-
-### 4. 启动
-
-配置完直接启动，就可以用了。
-
----
-
-## 简单总结一下
-
-这个项目主要是：
-
-* 把 LangChain4j + RAG 跑通
-* 用 Redis 做向量数据库
-* 做了会话记忆和隔离
-* 场景偏实际（法律问题）
-
-也比较方便改造成其他类型的智能体。
+MIT License

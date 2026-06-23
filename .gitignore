@@ -8,12 +8,18 @@
 # 忽略 Maven 编译输出（递归所有模块的 target 目录）
 target/
 AI_mindVault/
-application.yml
-**/content/
 
+# 忽略包含敏感信息的配置文件
+application.yml
+**/application.yml
+
+# 忽略其他文件
+**/content/
 */.mvn/
 *.json
 *.iml
 *.DS_Store
-
 **/test/
+
+# 不忽略配置模板
+!application.yml.example

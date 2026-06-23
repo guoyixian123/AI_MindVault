@@ -1,0 +1,55 @@
+# 应用配置示例
+# 复制此文件为 application.yml 并填入真实配置
+# cp application.yml.example application.yml
+
+spring:
+  application:
+    name: major
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:ai_mindvault}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:your_password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${QWEN_API_KEY:your_api_key}
+      model-name: qwen-plus
+      log-requests: true
+      log-responses: true
+    streaming-chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${QWEN_API_KEY:your_api_key}
+      model-name: qwen-plus
+      log-requests: true
+      log-responses: true
+    embedding-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${QWEN_API_KEY:your_api_key}
+      model-name: text-embedding-v4
+      log-requests: true
+      log-responses: true
+      max-segments-per-batch: 10
+  community:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+knowledge:
+  upload-dir: ./knowledge-uploads
+  chunk-size: 500
+  chunk-overlap: 100
