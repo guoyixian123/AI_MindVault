@@ -28,25 +28,11 @@
             letter-spacing: 0.1px;
         }
 
-        /* 滚动条样式 */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #e9ecef; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-        ::-webkit-scrollbar-track {
-            background: #e9ecef;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-
-        /* 输入框自适应高度 */
         textarea {
             min-height: 44px;
             max-height: 200px;
@@ -60,20 +46,6 @@
             resize: none;
         }
 
-        /* 新拟态风格样式 */
-        .neumorphic {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.08),
-            -8px -8px 16px rgba(255, 255, 255, 0.6);
-            transition: all 0.3s ease;
-        }
-
-        .neumorphic:hover {
-            box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.06),
-            -6px -6px 12px rgba(255, 255, 255, 0.5);
-        }
-
         .neumorphic-light {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
@@ -82,70 +54,19 @@
             box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
         }
 
-        .neumorphic-dark {
-            background: #1e293b;
-            border-radius: 16px;
-            box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.2),
-            -6px -6px 12px rgba(30, 41, 59, 0.5);
-        }
+        .scroll-area { overflow-y: auto; scrollbar-width: none; }
+        .scroll-area::-webkit-scrollbar { display: none; }
 
-        /* 滚动区域样式 */
-        .scroll-area {
-            overflow-y: auto;
-            scrollbar-width: none;
-        }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .animate-pulse { animation: pulse 1.5s infinite; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
 
-        .scroll-area::-webkit-scrollbar {
-            display: none;
-        }
+        .typing-cursor::after { content: "|"; animation: blink 1s step-end infinite; }
+        @keyframes blink { from, to { opacity: 1; } 50% { opacity: 0; } }
 
-        /* 加载动画 */
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 0.5;
-            }
-            50% {
-                opacity: 1;
-            }
-        }
-
-        .animate-pulse {
-            animation: pulse 1.5s infinite;
-        }
-
-        .delay-100 {
-            animation-delay: 0.1s;
-        }
-
-        .delay-200 {
-            animation-delay: 0.2s;
-        }
-
-        /* 打字机效果 */
-        .typing-cursor::after {
-            content: "|";
-            animation: blink 1s step-end infinite;
-        }
-
-        @keyframes blink {
-            from, to {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0;
-            }
-        }
-
-        .app-bg {
-            background: transparent;
-        }
-
-        .message-bubble {
-            line-height: 1.78;
-            word-break: break-word;
-            font-variant-ligatures: contextual;
-            text-rendering: optimizeLegibility;
-        }
+        .app-bg { background: transparent; }
+        .message-bubble { line-height: 1.78; word-break: break-word; }
 
         .input-shell {
             border: 1px solid var(--panel-border);
@@ -158,102 +79,154 @@
             background: linear-gradient(135deg, var(--brand), #6366f1);
             transition: all 0.22s ease;
         }
-
         .send-btn:hover {
             background: linear-gradient(135deg, var(--brand-hover), #4f46e5);
             transform: translateY(-1px);
         }
+
+        .sidebar {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--panel-border);
+            transition: transform 0.3s;
+        }
+
+        .session-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .session-item:hover { background: rgba(79, 70, 229, 0.1); }
+        .session-item.active { background: rgba(79, 70, 229, 0.15); border-left: 3px solid var(--brand); }
     </style>
 </head>
 <body>
-<div id="app" class="flex flex-col h-screen app-bg">
-    <!-- 顶部导航栏 -->
-    <header class="neumorphic-light py-3 px-4 flex items-center justify-between mx-3 mt-3">
-        <div class="flex items-center">
-            <div class="text-xl font-bold text-blue-600">法律智能顾问</div>
+<div id="app" class="flex h-screen app-bg">
+    <!-- 侧边栏 -->
+    <aside class="sidebar w-64 flex-shrink-0 flex flex-col h-screen transform -translate-x-full md:translate-x-0 transition-transform" :class="{ 'translate-x-0': showSidebar }">
+        <div class="p-4 border-b" style="border-color: var(--panel-border)">
+            <h2 class="font-bold text-lg" style="color: var(--brand)">AI法律助手</h2>
+            <p class="text-sm" style="color: var(--text-sub)">{{ userInfo.username || '用户' }}</p>
         </div>
-        <div class="flex items-center space-x-3">
-            <button
-                    @click="startNewConversation"
-                    class="p-3 rounded-xl text-white transition-all duration-300"
-                    style="width: 50px; background: linear-gradient(135deg,#4f46e5,#6366f1); box-shadow: 0 8px 20px rgba(79,70,229,.35);">
-                <i class="fas fa-plus"></i>
+        <button @click="createSession" class="m-4 py-2 text-white rounded-lg transition-colors" style="background: linear-gradient(135deg, var(--brand), #6366f1);">
+            <i class="fas fa-plus mr-2"></i>新建对话
+        </button>
+        <div class="flex-1 overflow-y-auto p-2">
+            <div v-if="sessions.length === 0" class="text-center py-4" style="color: var(--text-sub)">暂无会话</div>
+            <div v-for="session in sessions" :key="session.id"
+                 class="session-item mb-1"
+                 :class="{ active: session.id === currentSessionId }"
+                 @click="switchSession(session.id)">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm truncate flex-1">{{ session.title || '新对话' }}</span>
+                    <button @click.stop="deleteSession(session.id)" class="text-gray-400 hover:text-red-500 ml-2">
+                        <i class="fas fa-trash-alt text-xs"></i>
+                    </button>
+                </div>
+                <div class="text-xs mt-1" style="color: var(--text-sub)">{{ formatTime(session.updatedAt) }}</div>
+            </div>
+        </div>
+        <div class="p-4 border-t" style="border-color: var(--panel-border)">
+            <button @click="toggleDarkMode" class="w-full py-2 text-sm hover:opacity-80" style="color: var(--text-sub)">
+                <i :class="darkMode ? 'fas fa-sun' : 'fas fa-moon'" class="mr-2"></i>{{ darkMode ? '浅色模式' : '深色模式' }}
             </button>
-            <button @click="toggleDarkMode" class="p-2 rounded-xl hover:bg-gray-100 transition-all duration-300">
-                <i :class="darkMode ? 'fas fa-moon text-gray-600' : 'fas fa-sun text-gray-600'"></i>
+            <button @click="logout" class="w-full py-2 text-sm text-red-500 hover:text-red-600 mt-2">
+                <i class="fas fa-sign-out-alt mr-2"></i>退出登录
             </button>
         </div>
-    </header>
+    </aside>
 
-    <!-- 聊天内容区域 -->
-    <main class="flex-1 overflow-y-auto p-4 space-y-6 scroll-area" ref="chatContainer" :class="{ 'neumorphic-dark': darkMode }">
-        <div v-for="(message, index) in messages" :key="index" class="max-w-3xl mx-auto">
-            <div :class="['flex', message.role === 'user' ? 'justify-end' : 'justify-start']">
-                <div :class="['flex items-start space-x-3', message.role === 'user' ? 'flex-row-reverse space-x-reverse' : '']">
-                    <div :class="['w-10 h-10 rounded-full flex items-center justify-center',
-                                    message.role === 'user' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600',
-                                    darkMode && message.role === 'assistant' ? 'bg-gray-700 text-green-400' : '']">
-                        <i :class="message.role === 'user' ? 'fa-solid fa-user' : 'fa-solid fa-ghost'"></i>
-                    </div>
-                    <div :class="['p-4 rounded-xl max-w-lg message-bubble',
-                                    message.role === 'user'
-                                        ? 'bg-blue-50 text-blue-800'
-                                        : darkMode
-                                            ? 'bg-gray-800 text-gray-100'
-                                            : 'bg-white shadow-sm border border-slate-100']">
-                        <div v-if="message.role === 'assistant' && message.isLoading" class="flex space-x-2 mb-2">
-                            <div :class="['w-2 h-2 rounded-full', darkMode ? 'bg-gray-400' : 'bg-gray-300', 'animate-pulse']"></div>
-                            <div :class="['w-2 h-2 rounded-full', darkMode ? 'bg-gray-400' : 'bg-gray-300', 'animate-pulse delay-100']"></div>
-                            <div :class="['w-2 h-2 rounded-full', darkMode ? 'bg-gray-400' : 'bg-gray-300', 'animate-pulse delay-200']"></div>
+    <!-- 主聊天区域 -->
+    <main class="flex-1 flex flex-col h-screen">
+        <!-- 顶部导航栏 -->
+        <header class="neumorphic-light py-3 px-4 flex items-center justify-between mx-3 mt-3">
+            <div class="flex items-center">
+                <button @click="showSidebar = !showSidebar" class="md:hidden mr-3" style="color: var(--text-sub)">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="text-xl font-bold" style="color: var(--brand)">{{ currentSessionTitle || '法律智能顾问' }}</div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button @click="createSession"
+                        class="p-3 rounded-xl text-white transition-all duration-300"
+                        style="width: 50px; background: linear-gradient(135deg,#4f46e5,#6366f1); box-shadow: 0 8px 20px rgba(79,70,229,.35);">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button @click="toggleDarkMode" class="p-2 rounded-xl hover:bg-gray-100 transition-all duration-300">
+                    <i :class="darkMode ? 'fas fa-moon text-gray-600' : 'fas fa-sun text-gray-600'"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 聊天内容区域 -->
+        <main class="flex-1 overflow-y-auto p-4 space-y-6 scroll-area" ref="chatContainer">
+            <div v-if="messages.length === 0" class="text-center py-20" style="color: var(--text-sub)">
+                <i class="fas fa-gavel text-6xl mb-4"></i>
+                <p class="text-lg">您好，我是小幽👻</p>
+                <p class="text-sm">您的私人法律智能顾问，请问有什么可以帮您？</p>
+            </div>
+            <div v-for="(message, index) in messages" :key="index" class="max-w-3xl mx-auto">
+                <div :class="['flex', message.role === 'user' ? 'justify-end' : 'justify-start']">
+                    <div :class="['flex items-start space-x-3', message.role === 'user' ? 'flex-row-reverse space-x-reverse' : '']">
+                        <div :class="['w-10 h-10 rounded-full flex items-center justify-center',
+                                        message.role === 'user' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600']">
+                            <i :class="message.role === 'user' ? 'fa-solid fa-user' : 'fa-solid fa-ghost'"></i>
                         </div>
-                        <div v-else class="whitespace-pre-wrap">
-                            <span>{{ message.content.slice(0, message.visibleChars) }}</span>
-                            <span v-if="message.isStreaming" class="typing-cursor"></span>
+                        <div :class="['p-4 rounded-xl max-w-lg message-bubble',
+                                        message.role === 'user'
+                                            ? 'bg-blue-50 text-blue-800'
+                                            : 'bg-white shadow-sm border border-slate-100']">
+                            <div v-if="message.role === 'assistant' && message.isLoading" class="flex space-x-2 mb-2">
+                                <div class="w-2 h-2 rounded-full bg-gray-300 animate-pulse"></div>
+                                <div class="w-2 h-2 rounded-full bg-gray-300 animate-pulse delay-100"></div>
+                                <div class="w-2 h-2 rounded-full bg-gray-300 animate-pulse delay-200"></div>
+                            </div>
+                            <div v-else class="whitespace-pre-wrap">
+                                <span>{{ message.content.slice(0, message.visibleChars) }}</span>
+                                <span v-if="message.isStreaming" class="typing-cursor"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
 
-    <!-- 输入框区域 -->
-    <footer :class="['border-t p-4 mx-3 mb-3 rounded-2xl', darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white/70 border-slate-200']">
-        <div class="max-w-3xl mx-auto relative">
-            <div class="flex items-center input-shell rounded-2xl p-1">
+        <!-- 输入框区域 -->
+        <footer class="border-t p-4 mx-3 mb-3 rounded-2xl bg-white/70" style="border-color: var(--panel-border)">
+            <div class="max-w-3xl mx-auto relative">
+                <div class="flex items-center input-shell rounded-2xl p-1">
                     <textarea
                             v-model="userInput"
                             @keydown.enter.exact.prevent="sendMessage"
                             @keydown.ctrl.enter.exact.prevent="sendMessage"
                             @keydown.esc.exact="stopResponse"
-                            placeholder="输入您的问题..."
-                            :class="['flex-1 border rounded-xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 resize-none',
-                                darkMode
-                                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-400 placeholder-gray-400'
-                                    : 'border-gray-200 focus:ring-blue-300 focus:border-transparent']"
+                            placeholder="输入您的法律问题..."
+                            class="flex-1 border border-gray-200 rounded-xl py-3 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent resize-none"
                             rows="1"
                             ref="textarea"
                             @input="adjustTextareaHeight"
                     ></textarea>
-                <!-- 新建会话按钮 -->
-
-                <button
-                        @click="isLoading ? stopResponse() : sendMessage()"
-                        :disabled="!userInput.trim() && !isLoading"
-                        :class="['ml-2 p-3 rounded-xl send-btn',
-                                isLoading
-                                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                                    : 'text-white',
-                                'disabled:opacity-50 disabled:cursor-not-allowed']"
-                >
-                    <i :class="isLoading ? 'fas fa-stop' : 'fas fa-paper-plane'"></i>
-                </button>
+                    <button
+                            @click="isLoading ? stopResponse() : sendMessage()"
+                            :disabled="!userInput.trim() && !isLoading"
+                            :class="['ml-2 p-3 rounded-xl send-btn',
+                                    isLoading
+                                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                                        : 'text-white',
+                                    'disabled:opacity-50 disabled:cursor-not-allowed']"
+                    >
+                        <i :class="isLoading ? 'fas fa-stop' : 'fas fa-paper-plane'"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-400 mt-2 text-center">AI法律助手仅供参考，重大法律问题请咨询专业律师</p>
             </div>
-        </div>
-    </footer>
+        </footer>
+    </main>
 </div>
 
 <script>
-    const {createApp, ref, nextTick, onMounted, watch} = Vue;
+    const {createApp, ref, nextTick, onMounted, watch, computed} = Vue;
 
     createApp({
         setup() {
@@ -263,19 +236,90 @@
             const chatContainer = ref(null);
             const textarea = ref(null);
             const darkMode = ref(false);
+            const showSidebar = ref(false);
+            const sessions = ref([]);
+            const currentSessionId = ref(null);
+            const userInfo = ref({});
 
-            const memoryId = ref(Date.now().toString());
             let controller = null;
             let typingTimer = null;
 
-            // 调整文本区域高度
+            const currentSessionTitle = computed(() => {
+                const session = sessions.value.find(s => s.id === currentSessionId.value);
+                return session?.title || '法律智能顾问';
+            });
+
+            function getToken() {
+                return localStorage.getItem('token');
+            }
+
+            async function apiRequest(url, options = {}) {
+                const token = getToken();
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    ...options.headers
+                };
+                const res = await fetch(url, { ...options, headers });
+                if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                    return null;
+                }
+                return res;
+            }
+
+            async function loadSessions() {
+                const res = await apiRequest('/api/sessions');
+                if (!res) return;
+                const data = await res.json();
+                if (data.code === 200) {
+                    sessions.value = data.data || [];
+                }
+            }
+
+            async function createSession() {
+                const res = await apiRequest('/api/sessions', {
+                    method: 'POST',
+                    body: JSON.stringify({ title: '新对话' })
+                });
+                if (!res) return;
+                const data = await res.json();
+                if (data.code === 200) {
+                    sessions.value.unshift(data.data);
+                    switchSession(data.data.id);
+                    showSidebar.value = false;
+                }
+            }
+
+            async function switchSession(sessionId) {
+                currentSessionId.value = sessionId;
+                messages.value = [];
+                showSidebar.value = false;
+                nextTick(() => textarea.value?.focus());
+            }
+
+            async function deleteSession(sessionId) {
+                if (!confirm('确定要删除这个会话吗？')) return;
+                const res = await apiRequest(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+                if (!res) return;
+                const data = await res.json();
+                if (data.code === 200) {
+                    sessions.value = sessions.value.filter(s => s.id !== sessionId);
+                    if (currentSessionId.value === sessionId) {
+                        currentSessionId.value = null;
+                        messages.value = [];
+                    }
+                }
+            }
+
             const adjustTextareaHeight = () => {
                 const textareaEl = textarea.value;
                 textareaEl.style.height = 'auto';
                 textareaEl.style.height = `${Math.min(textareaEl.scrollHeight, 200)}px`;
             };
 
-            // 滚动到底部
             const scrollToBottom = () => {
                 nextTick(() => {
                     if (chatContainer.value) {
@@ -284,53 +328,18 @@
                 });
             };
 
-            // 切换暗黑模式
             const toggleDarkMode = () => {
                 darkMode.value = !darkMode.value;
                 localStorage.setItem('darkMode', darkMode.value);
             };
 
-            // 新建会话
-            const startNewConversation = () => {
-                // 清空聊天记录
-                messages.value = [];
-                // 生成新的 memoryId
-                memoryId.value = Date.now().toString();
-                // 添加欢迎消息
-                messages.value.push({
-                    role: 'assistant',
-                    content: '您好！我是您的私人专属法律智能顾问小幽👻，请问有什么能帮到您？',
-                    isLoading: false,
-                    visibleChars: 0,
-                    isStreaming: false
-                });
-                // 确保欢迎消息完全可见
-                messages.value[0].visibleChars = messages.value[0].content.length;
-                // 滚动到底部
-                scrollToBottom();
-                // 聚焦输入框
-                nextTick(() => {
-                    textarea.value.focus();
-                });
-            };
-
-            // 自适应打字效果（更流畅、更省性能）
             const startTypingEffect = (messageIndex) => {
                 if (typingTimer) return;
                 const tick = () => {
                     const message = messages.value[messageIndex];
-                    if (!message) {
-                        typingTimer = null;
-                        return;
-                    }
+                    if (!message) { typingTimer = null; return; }
                     const remaining = message.content.length - message.visibleChars;
-                    if (remaining <= 0) {
-                        message.isStreaming = false;
-                        typingTimer = null;
-                        return;
-                    }
-
-                    // 内容越长，单帧推进字符越多，避免长文本“卡慢”
+                    if (remaining <= 0) { message.isStreaming = false; typingTimer = null; return; }
                     const step = Math.min(8, Math.max(1, Math.ceil(remaining / 40)));
                     message.visibleChars = Math.min(message.content.length, message.visibleChars + step);
                     scrollToBottom();
@@ -339,14 +348,14 @@
                 typingTimer = requestAnimationFrame(tick);
             };
 
-            // 发送消息
             const sendMessage = async () => {
                 if (!userInput.value.trim() || isLoading.value) return;
 
-                // 中止之前的请求
-                if (controller) {
-                    controller.abort();
+                if (!currentSessionId.value) {
+                    await createSession();
                 }
+
+                if (controller) controller.abort();
                 controller = new AbortController();
 
                 const userMessage = {
@@ -368,73 +377,68 @@
                 };
 
                 messages.value.push(assistantMessage);
-
                 userInput.value = '';
                 adjustTextareaHeight();
                 scrollToBottom();
-
                 isLoading.value = true;
 
                 try {
-                    const params = new URLSearchParams({
-                        memoryId: memoryId.value,
-                        message: userMessage.content
-                    });
-
-                    const response = await fetch(`/chat?${params.toString()}`, {
-                        method: 'GET',
-                        signal: controller.signal,
-                        cache: 'no-store',
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
                         headers: {
-                            'Accept': 'text/html; charset=utf-8'
-                        }
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getToken()}`
+                        },
+                        body: JSON.stringify({
+                            memoryId: currentSessionId.value,
+                            message: userMessage.content
+                        }),
+                        signal: controller.signal
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login.html';
+                        return;
                     }
 
-                    if (!response.body) {
-                        throw new Error('后端未返回可读流(response.body 为空)');
-                    }
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    if (!response.body) throw new Error('后端未返回可读流');
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder('utf-8');
                     let buffer = '';
                     let messageIndex = messages.value.length - 1;
 
-                    // 先清除之前的打字效果
-                    if (typingTimer) {
-                        cancelAnimationFrame(typingTimer);
-                        typingTimer = null;
-                    }
+                    if (typingTimer) { cancelAnimationFrame(typingTimer); typingTimer = null; }
 
-                    // 开始流式处理
                     while (true) {
                         const {done, value} = await reader.read();
                         if (done) break;
-
                         const chunk = decoder.decode(value, {stream: true});
                         buffer += chunk;
-
-                        // 更新内容；TextDecoder 使用 UTF-8，保持颜文字/emoji 的正确解码
                         messages.value[messageIndex].content = buffer;
                         messages.value[messageIndex].isLoading = false;
-
-                        // 启动打字效果
                         startTypingEffect(messageIndex);
-
                         scrollToBottom();
                     }
 
-                    // 处理 decoder 末尾缓冲，避免多字节字符（含颜文字）被截断
                     buffer += decoder.decode();
                     messages.value[messageIndex].content = buffer;
 
+                    // 更新会话标题
+                    if (buffer && sessions.value.find(s => s.id === currentSessionId.value)?.title === '新对话') {
+                        const title = userMessage.content.substring(0, 20) + (userMessage.content.length > 20 ? '...' : '');
+                        await apiRequest(`/api/sessions/${currentSessionId.value}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ title })
+                        });
+                        const session = sessions.value.find(s => s.id === currentSessionId.value);
+                        if (session) session.title = title;
+                        loadSessions();
+                    }
                 } catch (error) {
-                    if (error.name === 'AbortError') {
-                        console.log('请求被用户中止');
-                    } else {
+                    if (error.name !== 'AbortError') {
                         console.error('请求出错:', error);
                         const lastMessage = messages.value[messages.value.length - 1];
                         lastMessage.content = '抱歉，请求过程中出现错误: ' + error.message;
@@ -444,86 +448,68 @@
                     const lastMessage = messages.value[messages.value.length - 1];
                     lastMessage.isLoading = false;
                     lastMessage.isStreaming = false;
-
-                    // 确保所有字符都可见
                     if (lastMessage.visibleChars < lastMessage.content.length) {
                         lastMessage.visibleChars = lastMessage.content.length;
                     }
-
                     isLoading.value = false;
                     controller = null;
-
-                    if (typingTimer) {
-                        cancelAnimationFrame(typingTimer);
-                        typingTimer = null;
-                    }
-
+                    if (typingTimer) { cancelAnimationFrame(typingTimer); typingTimer = null; }
                     scrollToBottom();
                 }
             };
 
-            // 停止响应
             const stopResponse = () => {
                 if (controller) {
                     controller.abort();
                     const lastMessage = messages.value[messages.value.length - 1];
                     lastMessage.isLoading = false;
                     lastMessage.isStreaming = false;
-
                     if (lastMessage.visibleChars < lastMessage.content.length) {
                         lastMessage.visibleChars = lastMessage.content.length;
                     }
-
                     isLoading.value = false;
                     controller = null;
-
-                    if (typingTimer) {
-                        cancelAnimationFrame(typingTimer);
-                        typingTimer = null;
-                    }
+                    if (typingTimer) { cancelAnimationFrame(typingTimer); typingTimer = null; }
                 }
             };
 
-            // 初始化
+            function formatTime(timestamp) {
+                if (!timestamp) return '';
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diff = now - date;
+                if (diff < 60000) return '刚刚';
+                if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+                if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+                return date.toLocaleDateString('zh-CN');
+            }
+
+            function logout() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+
             onMounted(() => {
-                // 检查暗黑模式偏好
-                darkMode.value = localStorage.getItem('darkMode') === 'true' ||
-                    (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-                // 添加欢迎消息
-                messages.value.push({
-                    role: 'assistant',
-                    content: '您好！我是您的私人专属法律智能顾问小幽👻，请问有什么能帮到您？',
-                    isLoading: false,
-                    visibleChars: 0,
-                    isStreaming: false
-                });
-
-                // 确保欢迎消息完全可见
-                messages.value[0].visibleChars = messages.value[0].content.length;
-                scrollToBottom();
-
-                // 聚焦输入框
-                nextTick(() => {
-                    textarea.value.focus();
-                });
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                userInfo.value = JSON.parse(localStorage.getItem('user') || '{}');
+                darkMode.value = localStorage.getItem('darkMode') === 'true';
+                loadSessions();
+                nextTick(() => textarea.value?.focus());
             });
 
-            // 监听消息变化自动滚动
             watch(messages, scrollToBottom, {deep: true});
 
             return {
-                messages,
-                userInput,
-                isLoading,
-                darkMode,
-                chatContainer,
-                textarea,
-                sendMessage,
-                stopResponse,
-                toggleDarkMode,
-                adjustTextareaHeight,
-                startNewConversation
+                messages, userInput, isLoading, darkMode, showSidebar,
+                sessions, currentSessionId, currentSessionTitle, userInfo,
+                chatContainer, textarea,
+                sendMessage, stopResponse, toggleDarkMode, adjustTextareaHeight,
+                createSession, switchSession, deleteSession, formatTime, logout
             };
         }
     }).mount('#app');

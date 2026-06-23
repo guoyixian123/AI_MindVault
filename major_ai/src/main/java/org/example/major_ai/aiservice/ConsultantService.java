@@ -14,7 +14,7 @@ import reactor.core.publisher.Flux;
         chatMemoryProvider = "chatMemoryProvider",
        contentRetriever = "contentRetriever"
 )
-public interface ConsoultantService {
+public interface ConsultantService {
     @SystemMessage(fromResource = "system.txt")//fromResource = "system.txt"
     Flux<String> chat(@MemoryId String memoryId,@UserMessage String message);
 }
