@@ -17,21 +17,17 @@
             --text-sub: #475569;
             --brand: #4f46e5;
             --brand-hover: #4338ca;
-            --ring: rgba(99, 102, 241, 0.25);
         }
 
         body {
-            font-family: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI Emoji",
-            "Apple Color Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
             background: var(--bg-main);
             color: var(--text-main);
-            letter-spacing: 0.1px;
         }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #e9ecef; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
         textarea {
             min-height: 44px;
@@ -65,7 +61,6 @@
         .typing-cursor::after { content: "|"; animation: blink 1s step-end infinite; }
         @keyframes blink { from, to { opacity: 1; } 50% { opacity: 0; } }
 
-        .app-bg { background: transparent; }
         .message-bubble { line-height: 1.78; word-break: break-word; }
 
         .input-shell {
@@ -102,12 +97,12 @@
     </style>
 </head>
 <body>
-<div id="app" class="flex h-screen app-bg">
+<div id="app" class="flex h-screen">
     <!-- 侧边栏 -->
     <aside class="sidebar w-64 flex-shrink-0 flex flex-col h-screen transform -translate-x-full md:translate-x-0 transition-transform" :class="{ 'translate-x-0': showSidebar }">
         <div class="p-4 border-b" style="border-color: var(--panel-border)">
             <h2 class="font-bold text-lg" style="color: var(--brand)">AI法律助手</h2>
-            <p class="text-sm" style="color: var(--text-sub)">{{ userInfo.username || '用户' }}</p>
+            <p class="text-sm" style="color: var(--text-sub)">小幽👻</p>
         </div>
         <button @click="createSession" class="m-4 py-2 text-white rounded-lg transition-colors" style="background: linear-gradient(135deg, var(--brand), #6366f1);">
             <i class="fas fa-plus mr-2"></i>新建对话
@@ -130,9 +125,6 @@
         <div class="p-4 border-t" style="border-color: var(--panel-border)">
             <button @click="toggleDarkMode" class="w-full py-2 text-sm hover:opacity-80" style="color: var(--text-sub)">
                 <i :class="darkMode ? 'fas fa-sun' : 'fas fa-moon'" class="mr-2"></i>{{ darkMode ? '浅色模式' : '深色模式' }}
-            </button>
-            <button @click="logout" class="w-full py-2 text-sm text-red-500 hover:text-red-600 mt-2">
-                <i class="fas fa-sign-out-alt mr-2"></i>退出登录
             </button>
         </div>
     </aside>
@@ -208,15 +200,15 @@
                             @input="adjustTextareaHeight"
                     ></textarea>
                     <button
-                            @click="isLoading ? stopResponse() : sendMessage()"
-                            :disabled="!userInput.trim() && !isLoading"
+                            @click="loadingSessions[currentSessionId] ? stopResponse() : sendMessage()"
+                            :disabled="!userInput.trim() && !loadingSessions[currentSessionId]"
                             :class="['ml-2 p-3 rounded-xl send-btn',
-                                    isLoading
+                                    loadingSessions[currentSessionId]
                                         ? 'bg-red-500 hover:bg-red-600 text-white'
                                         : 'text-white',
                                     'disabled:opacity-50 disabled:cursor-not-allowed']"
                     >
-                        <i :class="isLoading ? 'fas fa-stop' : 'fas fa-paper-plane'"></i>
+                        <i :class="loadingSessions[currentSessionId] ? 'fas fa-stop' : 'fas fa-paper-plane'"></i>
                     </button>
                 </div>
                 <p class="text-xs text-gray-400 mt-2 text-center">AI法律助手仅供参考，重大法律问题请咨询专业律师</p>
@@ -233,13 +225,13 @@
             const messages = ref([]);
             const userInput = ref('');
             const isLoading = ref(false);
+            const loadingSessions = ref({}); // 记录正在加载的会话ID {sessionId: true}
             const chatContainer = ref(null);
             const textarea = ref(null);
             const darkMode = ref(false);
             const showSidebar = ref(false);
             const sessions = ref([]);
             const currentSessionId = ref(null);
-            const userInfo = ref({});
 
             let controller = null;
             let typingTimer = null;
@@ -249,30 +241,8 @@
                 return session?.title || '法律智能顾问';
             });
 
-            function getToken() {
-                return localStorage.getItem('token');
-            }
-
-            async function apiRequest(url, options = {}) {
-                const token = getToken();
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                    ...options.headers
-                };
-                const res = await fetch(url, { ...options, headers });
-                if (res.status === 401) {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    window.location.href = '/login.html';
-                    return null;
-                }
-                return res;
-            }
-
             async function loadSessions() {
-                const res = await apiRequest('/api/sessions');
-                if (!res) return;
+                const res = await fetch('/api/sessions');
                 const data = await res.json();
                 if (data.code === 200) {
                     sessions.value = data.data || [];
@@ -280,11 +250,11 @@
             }
 
             async function createSession() {
-                const res = await apiRequest('/api/sessions', {
+                const res = await fetch('/api/sessions', {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: '新对话' })
                 });
-                if (!res) return;
                 const data = await res.json();
                 if (data.code === 200) {
                     sessions.value.unshift(data.data);
@@ -294,16 +264,43 @@
             }
 
             async function switchSession(sessionId) {
+                // 停止打字动画
+                if (typingTimer) {
+                    cancelAnimationFrame(typingTimer);
+                    typingTimer = null;
+                }
+
                 currentSessionId.value = sessionId;
                 messages.value = [];
                 showSidebar.value = false;
+                // 更新全局isLoading状态为当前会话的加载状态
+                isLoading.value = !!loadingSessions.value[sessionId];
+
+                // 加载历史消息
+                try {
+                    const res = await fetch(`/api/sessions/${sessionId}/messages`);
+                    const data = await res.json();
+                    if (data.code === 200 && data.data) {
+                        data.data.forEach(msg => {
+                            messages.value.push({
+                                role: msg.role,
+                                content: msg.content,
+                                isLoading: false,
+                                visibleChars: msg.content.length,
+                                isStreaming: false
+                            });
+                        });
+                    }
+                } catch (error) {
+                    console.error('加载历史消息失败:', error);
+                }
+
                 nextTick(() => textarea.value?.focus());
             }
 
             async function deleteSession(sessionId) {
                 if (!confirm('确定要删除这个会话吗？')) return;
-                const res = await apiRequest(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-                if (!res) return;
+                const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
                 const data = await res.json();
                 if (data.code === 200) {
                     sessions.value = sessions.value.filter(s => s.id !== sessionId);
@@ -349,58 +346,59 @@
             };
 
             const sendMessage = async () => {
-                if (!userInput.value.trim() || isLoading.value) return;
+                if (!userInput.value.trim()) return;
+                // 检查当前会话是否正在加载
+                if (loadingSessions.value[currentSessionId.value]) return;
 
                 if (!currentSessionId.value) {
                     await createSession();
                 }
 
-                if (controller) controller.abort();
-                controller = new AbortController();
+                // 保存当前会话ID，防止切换后丢失
+                const sessionId = currentSessionId.value;
+                const messageText = userInput.value.trim();
+
+                // 标记该会话正在加载
+                loadingSessions.value[sessionId] = true;
+                // 只有在当前会话时才设置全局isLoading
+                if (currentSessionId.value === sessionId) {
+                    isLoading.value = true;
+                }
 
                 const userMessage = {
                     role: 'user',
-                    content: userInput.value.trim(),
+                    content: messageText,
                     isLoading: false,
-                    visibleChars: userInput.value.trim().length,
+                    visibleChars: messageText.length,
                     isStreaming: false
                 };
 
-                messages.value.push(userMessage);
+                // 只在当前会话显示消息
+                if (currentSessionId.value === sessionId) {
+                    messages.value.push(userMessage);
+                    const assistantMessage = {
+                        role: 'assistant',
+                        content: '',
+                        isLoading: true,
+                        visibleChars: 0,
+                        isStreaming: true
+                    };
+                    messages.value.push(assistantMessage);
+                }
 
-                const assistantMessage = {
-                    role: 'assistant',
-                    content: '',
-                    isLoading: true,
-                    visibleChars: 0,
-                    isStreaming: true
-                };
-
-                messages.value.push(assistantMessage);
                 userInput.value = '';
                 adjustTextareaHeight();
                 scrollToBottom();
-                isLoading.value = true;
 
                 try {
                     const response = await fetch('/api/chat', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getToken()}`
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            memoryId: currentSessionId.value,
-                            message: userMessage.content
-                        }),
-                        signal: controller.signal
+                            memoryId: sessionId,
+                            message: messageText
+                        })
                     });
-
-                    if (response.status === 401) {
-                        localStorage.removeItem('token');
-                        window.location.href = '/login.html';
-                        return;
-                    }
 
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     if (!response.body) throw new Error('后端未返回可读流');
@@ -408,7 +406,6 @@
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder('utf-8');
                     let buffer = '';
-                    let messageIndex = messages.value.length - 1;
 
                     if (typingTimer) { cancelAnimationFrame(typingTimer); typingTimer = null; }
 
@@ -417,58 +414,96 @@
                         if (done) break;
                         const chunk = decoder.decode(value, {stream: true});
                         buffer += chunk;
-                        messages.value[messageIndex].content = buffer;
-                        messages.value[messageIndex].isLoading = false;
-                        startTypingEffect(messageIndex);
-                        scrollToBottom();
+                        // 只在当前会话更新UI - 每次重新查找最后一个assistant消息
+                        if (currentSessionId.value === sessionId) {
+                            const lastMsg = messages.value[messages.value.length - 1];
+                            if (lastMsg && lastMsg.role === 'assistant') {
+                                lastMsg.content = buffer;
+                                lastMsg.isLoading = false;
+                                startTypingEffect(messages.value.length - 1);
+                                scrollToBottom();
+                            }
+                        }
                     }
 
                     buffer += decoder.decode();
-                    messages.value[messageIndex].content = buffer;
+                    // 最终更新消息内容
+                    if (currentSessionId.value === sessionId) {
+                        const lastMsg = messages.value[messages.value.length - 1];
+                        if (lastMsg && lastMsg.role === 'assistant') {
+                            lastMsg.content = buffer;
+                        }
+                    }
+
+                    // 保存 AI 回复到数据库（始终执行，不管是否切换了会话）
+                    try {
+                        await fetch('/api/messages', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                sessionId: sessionId,
+                                role: 'assistant',
+                                content: buffer
+                            })
+                        });
+                    } catch (e) {
+                        console.error('保存AI回复失败:', e);
+                    }
 
                     // 更新会话标题
-                    if (buffer && sessions.value.find(s => s.id === currentSessionId.value)?.title === '新对话') {
-                        const title = userMessage.content.substring(0, 20) + (userMessage.content.length > 20 ? '...' : '');
-                        await apiRequest(`/api/sessions/${currentSessionId.value}`, {
+                    const session = sessions.value.find(s => s.id === sessionId);
+                    if (buffer && session && session.title === '新对话') {
+                        const title = messageText.substring(0, 20) + (messageText.length > 20 ? '...' : '');
+                        await fetch(`/api/sessions/${sessionId}`, {
                             method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ title })
                         });
-                        const session = sessions.value.find(s => s.id === currentSessionId.value);
                         if (session) session.title = title;
                         loadSessions();
                     }
                 } catch (error) {
-                    if (error.name !== 'AbortError') {
-                        console.error('请求出错:', error);
-                        const lastMessage = messages.value[messages.value.length - 1];
-                        lastMessage.content = '抱歉，请求过程中出现错误: ' + error.message;
-                        lastMessage.visibleChars = lastMessage.content.length;
+                    console.error('请求出错:', error);
+                    if (currentSessionId.value === sessionId) {
+                        const lastMsg = messages.value[messages.value.length - 1];
+                        if (lastMsg) {
+                            lastMsg.content = '抱歉，请求过程中出现错误: ' + error.message;
+                            lastMsg.visibleChars = lastMsg.content.length;
+                        }
                     }
                 } finally {
-                    const lastMessage = messages.value[messages.value.length - 1];
-                    lastMessage.isLoading = false;
-                    lastMessage.isStreaming = false;
-                    if (lastMessage.visibleChars < lastMessage.content.length) {
-                        lastMessage.visibleChars = lastMessage.content.length;
+                    // 移除该会话的加载状态
+                    delete loadingSessions.value[sessionId];
+                    // 只在当前会话更新状态
+                    if (currentSessionId.value === sessionId) {
+                        const lastMsg = messages.value[messages.value.length - 1];
+                        if (lastMsg) {
+                            lastMsg.isLoading = false;
+                            lastMsg.isStreaming = false;
+                            if (lastMsg.visibleChars < lastMsg.content.length) {
+                                lastMsg.visibleChars = lastMsg.content.length;
+                            }
+                        }
+                        isLoading.value = false;
                     }
-                    isLoading.value = false;
-                    controller = null;
                     if (typingTimer) { cancelAnimationFrame(typingTimer); typingTimer = null; }
                     scrollToBottom();
                 }
             };
 
             const stopResponse = () => {
-                if (controller) {
-                    controller.abort();
-                    const lastMessage = messages.value[messages.value.length - 1];
-                    lastMessage.isLoading = false;
-                    lastMessage.isStreaming = false;
-                    if (lastMessage.visibleChars < lastMessage.content.length) {
-                        lastMessage.visibleChars = lastMessage.content.length;
-                    }
+                const sessionId = currentSessionId.value;
+                if (loadingSessions.value[sessionId]) {
+                    delete loadingSessions.value[sessionId];
                     isLoading.value = false;
-                    controller = null;
+                    const lastMessage = messages.value[messages.value.length - 1];
+                    if (lastMessage) {
+                        lastMessage.isLoading = false;
+                        lastMessage.isStreaming = false;
+                        if (lastMessage.visibleChars < lastMessage.content.length) {
+                            lastMessage.visibleChars = lastMessage.content.length;
+                        }
+                    }
                     if (typingTimer) { cancelAnimationFrame(typingTimer); typingTimer = null; }
                 }
             };
@@ -484,19 +519,7 @@
                 return date.toLocaleDateString('zh-CN');
             }
 
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login.html';
-            }
-
             onMounted(() => {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    window.location.href = '/login.html';
-                    return;
-                }
-                userInfo.value = JSON.parse(localStorage.getItem('user') || '{}');
                 darkMode.value = localStorage.getItem('darkMode') === 'true';
                 loadSessions();
                 nextTick(() => textarea.value?.focus());
@@ -505,11 +528,11 @@
             watch(messages, scrollToBottom, {deep: true});
 
             return {
-                messages, userInput, isLoading, darkMode, showSidebar,
-                sessions, currentSessionId, currentSessionTitle, userInfo,
+                messages, userInput, isLoading, loadingSessions, darkMode, showSidebar,
+                sessions, currentSessionId, currentSessionTitle,
                 chatContainer, textarea,
                 sendMessage, stopResponse, toggleDarkMode, adjustTextareaHeight,
-                createSession, switchSession, deleteSession, formatTime, logout
+                createSession, switchSession, deleteSession, formatTime
             };
         }
     }).mount('#app');
