@@ -20,6 +20,10 @@ public class ChatSessionService {
 
     public ChatSession createSession(String title) {
         String sessionId = UUID.randomUUID().toString().replace("-", "");
+        return createSessionWithId(sessionId, title);
+    }
+
+    public ChatSession createSessionWithId(String sessionId, String title) {
         long now = System.currentTimeMillis();
 
         ChatSessionEntity entity = new ChatSessionEntity();

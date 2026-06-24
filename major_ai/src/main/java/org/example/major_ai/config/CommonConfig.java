@@ -15,12 +15,14 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class CommonConfig {
@@ -50,18 +52,32 @@ public class CommonConfig {
                 .build();
     }
 
-    // 取消注释以启用 RAG 数据导入
-    // @Bean
-    public EmbeddingStore store() {
-        List<Document> documents = ClassPathDocumentLoader.loadDocuments("content");
-        DocumentSplitter ds = DocumentSplitters.recursive(chunkSize, chunkOverlap);
+    @Value("${knowledge.auto-load-on-startup:false}")
+    private boolean autoLoadOnStartup;
 
+    // RAG 数据导入 - 可配置是否启动时自动加载
+    @Bean
+    public EmbeddingStore store() {
+        if (!autoLoadOnStartup) {
+            log.info("跳过启动时自动加载知识库（设置 knowledge.auto-load-on-startup=true 启用）");
+            return redisEmbeddingStore;
+        }
+
+        log.info("开始加载知识库文档到向量数据库...");
+        List<Document> documents = ClassPathDocumentLoader.loadDocuments("content");
+        if (documents.isEmpty()) {
+            log.info("未找到知识库文档，跳过加载");
+            return redisEmbeddingStore;
+        }
+
+        DocumentSplitter ds = DocumentSplitters.recursive(chunkSize, chunkOverlap);
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .embeddingModel(embeddingModel)
                 .documentSplitter(ds)
                 .embeddingStore(redisEmbeddingStore)
                 .build();
         ingestor.ingest(documents);
+        log.info("知识库文档加载完成，共 {} 个文档", documents.size());
         return redisEmbeddingStore;
     }
 

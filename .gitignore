@@ -14,12 +14,16 @@ application.yml
 **/application.yml
 
 # 忽略其他文件
-**/content/
+.uploads/
 */.mvn/
 *.json
 *.iml
 *.DS_Store
 **/test/
+
+# 不忽略前端的 package 文件
+!**/package.json
+!**/package-lock.json
 
 # 不忽略配置模板
 !application.yml.example
