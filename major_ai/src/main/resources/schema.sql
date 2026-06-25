@@ -181,19 +181,6 @@ CREATE TABLE IF NOT EXISTS appointment (
     FOREIGN KEY (doctor_id) REFERENCES `user`(id) ON DELETE SET NULL
 );
 
--- 知识库文档元数据
-CREATE TABLE IF NOT EXISTS knowledge_document (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    category VARCHAR(50) DEFAULT 'GENERAL' COMMENT 'MEDICINE/DISEASE/SYMPTOM/GENERAL',
-    file_path VARCHAR(500),
-    file_size BIGINT,
-    upload_time BIGINT NOT NULL,
-    status TINYINT DEFAULT 1 COMMENT '1-有效 0-已删除',
-    INDEX idx_category (category),
-    INDEX idx_status (status)
-);
-
 -- ==================== 初始化科室数据 ====================
 INSERT IGNORE INTO department (name, description, icon, sort_order, status, created_at, updated_at) VALUES
 ('消化内科', '消化系统疾病诊治', 'stomach', 1, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),

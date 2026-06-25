@@ -27,3 +27,4 @@ application.yml
 
 # 不忽略配置模板
 !application.yml.example
+/docs/
