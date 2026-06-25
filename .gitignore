@@ -1,6 +1,6 @@
 # 忽略 IDEA 配置
 .idea/
-
+.claude/
 # 忽略环境变量文件（包含密钥）
 .env
 **/.env
@@ -20,6 +20,9 @@ application.yml
 *.iml
 *.DS_Store
 **/test/
+*.docx
+*.pptx
+CLAUDE.md
 
 # 不忽略前端的 package 文件
 !**/package.json
