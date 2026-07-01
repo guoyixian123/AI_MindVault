@@ -43,6 +43,9 @@
         </form>
       </div>
 
+      <!-- 加载动画 -->
+      <AILoadingIndicator v-if="analyzing && !result" label="A.R.I.A 正在解读报告" />
+
       <!-- 解读结果 -->
       <div v-if="result" class="section-card result-card">
         <div class="result-header">
@@ -84,6 +87,7 @@
 import { ref, onMounted } from 'vue'
 import { renderMarkdown } from '../utils/markedConfig'
 import api from '../utils/api'
+import AILoadingIndicator from '../components/AILoadingIndicator.vue'
 
 const reportType = ref('综合体检报告')
 const reportContent = ref('')

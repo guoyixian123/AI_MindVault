@@ -82,6 +82,9 @@
         </button>
       </div>
 
+      <!-- Loading -->
+      <AILoadingIndicator v-if="loading && !result" label="A.R.I.A 正在查询中" />
+
       <!-- Result -->
       <div v-if="result" class="result-card">
         <div class="result-header">
@@ -101,6 +104,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useChatWebSocket } from '../utils/websocket'
 import { renderMarkdown } from '../utils/markedConfig'
 import { useStreamingText } from '../composables/useStreamingText'
+import AILoadingIndicator from '../components/AILoadingIndicator.vue'
 
 const mode = ref('query')
 const loading = ref(false)
