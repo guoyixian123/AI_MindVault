@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.major_ai.aiservice.ConsultantService;
 import org.example.major_ai.service.ChatMessageService;
 import org.example.major_ai.service.ChatSessionService;
+import org.example.major_ai.service.HealthReportService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -24,6 +25,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ConsultantService consultantService;
     private final ChatMessageService chatMessageService;
     private final ChatSessionService chatSessionService;
+    private final HealthReportService healthReportService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CopyOnWriteArrayList<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
 
@@ -49,14 +51,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String memoryId = rawMemoryId.isBlank() ? "default" : rawMemoryId;
             String userMessage = json.has("message") ? json.get("message").asText() : "";
             String scenario = json.has("scenario") ? json.get("scenario").asText() : "chat";
+            Long reportId = json.has("reportId") && !json.get("reportId").isNull()
+                    ? json.get("reportId").asLong() : null;
 
-            log.info("解析后: memoryId={}, scenario={}, message='{}'", memoryId, scenario, userMessage);
+            log.info("解析后: memoryId={}, scenario={}, message='{}', reportId={}", memoryId, scenario, userMessage, reportId);
 
             // 根据场景构建 prompt
             String prompt = switch (scenario) {
                 case "symptom" -> buildSymptomPrompt(json);
                 case "medicine" -> buildMedicinePrompt(json);
                 case "disease" -> buildDiseasePrompt(json);
+                case "report" -> buildReportPrompt(json);
                 default -> userMessage;
             };
 
@@ -98,6 +103,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         sendMessage(session, "[DONE]");
                         if (!fullReply.isEmpty()) {
                             chatMessageService.saveMessage(memoryId, "assistant", fullReply.toString());
+                            // 体检报告场景：将分析结果保存回 health_report 表
+                            if ("report".equals(scenario) && reportId != null) {
+                                healthReportService.updateAnalysis(reportId, fullReply.toString());
+                                log.info("体检报告分析结果已保存: reportId={}", reportId);
+                            }
                         }
                     })
                     .doOnError(error -> {
@@ -156,5 +166,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             case "debunk" -> "请辟谣：" + (json.has("claim") ? json.get("claim").asText() : "");
             default -> "请科普：" + name;
         };
+    }
+
+    private String buildReportPrompt(JsonNode json) {
+        String reportType = json.has("reportType") ? json.get("reportType").asText() : "综合体检报告";
+        String content = json.has("reportContent") ? json.get("reportContent").asText() : "";
+        return "你是一位专业的体检报告解读顾问。请用通俗易懂的语言解读以下体检报告，要求：\n" +
+                "1. 逐项解读每个指标，说明其含义\n" +
+                "2. 标注异常指标（偏高用↑，偏低用↓）\n" +
+                "3. 解释异常指标可能的原因\n" +
+                "4. 给出通用的改善建议\n" +
+                "5. 提示哪些指标需要复查或进一步检查\n\n" +
+                "报告类型：" + reportType + "\n" +
+                "报告内容：\n" + content;
     }
 }

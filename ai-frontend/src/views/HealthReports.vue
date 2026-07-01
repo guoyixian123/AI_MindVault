@@ -54,9 +54,8 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
-        <div class="result-content markdown-body">
-          <div v-html="renderMarkdown(result)"></div>
-          <span v-if="analyzing" class="typing-cursor"></span>
+        <div class="result-content markdown-body" :class="{ 'typing-cursor': isStreaming }">
+          <div v-html="renderMarkdown(displayedContent)"></div>
         </div>
         <div class="result-actions">
           <button class="action-btn" @click="reset">继续解读其他报告</button>
@@ -84,19 +83,62 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { renderMarkdown } from '../utils/markedConfig'
+import { useChatWebSocket } from '../utils/websocket'
+import { useStreamingText } from '../composables/useStreamingText'
 import api from '../utils/api'
 import AILoadingIndicator from '../components/AILoadingIndicator.vue'
 
 const reportType = ref('综合体检报告')
 const reportContent = ref('')
 const result = ref('')
+const rawResult = ref('')
 const analyzing = ref(false)
 const history = ref([])
 
+const chatWs = useChatWebSocket()
+const { displayedContent, isStreaming, appendText, flush, resetStreaming } = useStreamingText()
+
+const onMessage = (data) => {
+  rawResult.value += data
+  result.value += data
+  appendText(data)
+}
+
+const onDone = () => {
+  const wait = setInterval(() => {
+    if (!isStreaming.value) {
+      clearInterval(wait)
+      flush(rawResult.value)
+      analyzing.value = false
+    }
+  }, 50)
+}
+
+const onError = (error) => {
+  console.error('WebSocket error:', error)
+  result.value = '解读失败，请确保后端服务正在运行。'
+  analyzing.value = false
+}
+
 onMounted(async () => {
+  chatWs.removeCallback('onMessage')
+  chatWs.removeCallback('onDone')
+  chatWs.removeCallback('onError')
+
+  chatWs.on('message', onMessage)
+  chatWs.on('done', onDone)
+  chatWs.on('error', onError)
+
+  chatWs.connect()
   await loadHistory()
+})
+
+onUnmounted(() => {
+  chatWs.removeCallback('onMessage')
+  chatWs.removeCallback('onDone')
+  chatWs.removeCallback('onError')
 })
 
 async function loadHistory() {
@@ -114,6 +156,8 @@ function viewHistory(item) {
   reportType.value = item.reportType
   reportContent.value = item.reportContent
   result.value = item.aiAnalysis
+  rawResult.value = item.aiAnalysis
+  flush(item.aiAnalysis)
 }
 
 const reportTypes = ['综合体检报告', '血常规', '肝功能', '肾功能', '血脂', '血糖', '彩超', '其他']
@@ -123,55 +167,27 @@ async function analyzeReport() {
 
   analyzing.value = true
   result.value = ''
+  rawResult.value = ''
+  resetStreaming()
 
   try {
     // 先保存报告
-    await api.post('/api/health/reports/upload', {
+    const uploadRes = await api.post('/api/health/reports/upload', {
       reportType: reportType.value,
       reportContent: reportContent.value
     })
+    const reportId = uploadRes.data?.data?.id
 
-    // 流式获取 AI 解读
-    const response = await fetch('http://localhost:8080/api/health/reports/analyze-latest', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem('token')
-      },
-      body: JSON.stringify({
-        reportType: reportType.value,
-        reportContent: reportContent.value
-      })
+    // 通过 WebSocket 发送获取 AI 解读
+    chatWs.send('', {
+      memoryId: 'report-' + Date.now(),
+      scenario: 'report',
+      reportId: reportId,
+      reportType: reportType.value,
+      reportContent: reportContent.value
     })
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let fullText = ''
-
-    // 收集所有数据
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      fullText += decoder.decode(value, { stream: true })
-    }
-
-    // 打字机效果逐字显示
-    let index = 0
-    const typeSpeed = 50 // 每个字符的延迟(ms)
-
-    function typeNextChar() {
-      if (index < fullText.length) {
-        result.value += fullText[index]
-        index++
-        setTimeout(typeNextChar, typeSpeed)
-      } else {
-        analyzing.value = false
-      }
-    }
-
-    typeNextChar()
-    return // 不在finally中设置analyzing
   } catch (e) {
+    console.error('体检报告解读失败:', e)
     result.value = '解读失败，请确保后端服务正在运行。'
     analyzing.value = false
   }
@@ -180,10 +196,12 @@ async function analyzeReport() {
 function reset() {
   reportContent.value = ''
   result.value = ''
+  rawResult.value = ''
+  resetStreaming()
 }
 
 function copyResult() {
-  navigator.clipboard.writeText(result.value.replace(/<br>/g, '\n').replace(/<[^>]+>/g, ''))
+  navigator.clipboard.writeText(rawResult.value || result.value)
 }
 
 function formatTime(timestamp) {
