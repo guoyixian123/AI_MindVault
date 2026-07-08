@@ -48,17 +48,23 @@
       <div class="section-card">
         <h2>我的预约</h2>
         <div class="appointment-list">
-          <div v-for="apt in appointments" :key="apt.id" class="apt-card">
-            <div class="apt-header">
-              <span class="apt-status" :class="apt.status.toLowerCase()">{{ statusText(apt.status) }}</span>
+          <div v-for="apt in appointments" :key="apt.id" class="apt-card" :class="apt.status.toLowerCase()">
+            <div class="apt-topbar">
               <span class="apt-dept">{{ getDeptName(apt.departmentId) }}</span>
+              <span class="apt-status" :class="apt.status.toLowerCase()">{{ statusText(apt.status) }}</span>
             </div>
-            <div class="apt-time">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              {{ formatTime(apt.appointmentTime) }}
+            <div class="apt-time-block">
+              <span class="apt-time-big">{{ formatTimeOnly(apt.appointmentTime) }}</span>
+              <span class="apt-date-sub">{{ formatDate(apt.appointmentTime) }}</span>
             </div>
-            <div v-if="apt.complaint" class="apt-complaint">{{ apt.complaint }}</div>
-            <button v-if="apt.status === 'PENDING'" class="cancel-btn" @click="cancelAppointment(apt.id)">取消预约</button>
+            <div v-if="apt.complaint" class="apt-bottom">
+              <span class="apt-complaint">{{ apt.complaint }}</span>
+              <button v-if="apt.status === 'PENDING'" class="cancel-btn" @click="cancelAppointment(apt.id)">取消预约</button>
+            </div>
+            <div v-else class="apt-bottom">
+              <span></span>
+              <button v-if="apt.status === 'PENDING'" class="cancel-btn" @click="cancelAppointment(apt.id)">取消预约</button>
+            </div>
           </div>
           <div v-if="appointments.length === 0" class="empty">暂无预约记录</div>
         </div>
@@ -179,6 +185,19 @@ function statusText(status) {
 function formatTime(time) {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN')
+}
+
+function formatDate(time) {
+  if (!time) return ''
+  const d = new Date(time)
+  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${week[d.getDay()]}`
+}
+
+function formatTimeOnly(time) {
+  if (!time) return ''
+  const d = new Date(time)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 </script>
 
@@ -341,78 +360,109 @@ function formatTime(time) {
   gap: 12px;
 }
 
+/* ---- 预约卡片 - 登机牌风格 ---- */
 .apt-card {
-  padding: 16px;
-  background: var(--color-paper);
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
+  padding: 16px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
 }
 
-.apt-header {
+.apt-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 3px;
+}
+
+.apt-card.pending::before   { background: #f59e0b; }
+.apt-card.confirmed::before { background: #22c55e; }
+.apt-card.cancelled::before { background: #cbd5e1; }
+.apt-card.completed::before { background: var(--color-forest); }
+
+.apt-card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* 顶栏：科室 + 状态 */
+.apt-topbar {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.apt-status {
-  padding: 3px 10px;
-  border-radius: var(--radius-xs);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.apt-status.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.apt-status.confirmed {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.apt-status.cancelled {
-  background: var(--color-cloud);
-  color: var(--text-muted);
-}
-
-.apt-status.completed {
-  background: var(--color-paper);
-  color: var(--color-forest);
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .apt-dept {
-  padding: 3px 10px;
-  border-radius: var(--radius-xs);
-  font-size: 12px;
-  background: var(--color-paper);
-  color: var(--color-forest);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.apt-time {
-  font-size: 14px;
+.apt-status {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.apt-status.pending   { background: #fef3c7; color: #b45309; }
+.apt-status.confirmed { background: #dcfce7; color: #15803d; }
+.apt-status.cancelled { background: #f1f5f9; color: #64748b; }
+.apt-status.completed { background: #dcfce7; color: #15803d; }
+
+/* 时间区 */
+.apt-time-block {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border-light);
+}
+
+.apt-time-big {
+  font-size: 24px;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+
+.apt-date-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* 底部：诉求 + 取消 */
+.apt-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .apt-complaint {
   font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 10px;
 }
 
 .cancel-btn {
-  padding: 6px 16px;
-  background: rgba(168, 80, 58, 0.08);
-  color: var(--color-danger);
-  border: none;
+  flex-shrink: 0;
+  padding: 5px 14px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.15s;
 }
 
 .cancel-btn:hover {
-  background: rgba(168, 80, 58, 0.15);
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
 .empty {
