@@ -75,12 +75,9 @@ public class SecurityConfig {
                 // 静态资源
                 .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/assets/**", "/favicon.ico").permitAll()
 
-                // AI聊天接口（保留原有兼容）
+                // AI聊天流式接口
                 .requestMatchers(HttpMethod.POST, "/api/chat").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/chat/**").permitAll()
-
-                // WebSocket接口
-                .requestMatchers("/ws/**").permitAll()
 
                 // 科室列表公开访问
                 .requestMatchers(HttpMethod.GET, "/api/admin/departments").permitAll()

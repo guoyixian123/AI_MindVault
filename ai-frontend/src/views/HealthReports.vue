@@ -85,7 +85,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { renderMarkdown } from '../utils/markedConfig'
-import { useChatWebSocket } from '../utils/websocket'
+import { useChatWebSocket } from '../utils/streaming'
 import { useStreamingText } from '../composables/useStreamingText'
 import api from '../utils/api'
 import AILoadingIndicator from '../components/AILoadingIndicator.vue'
