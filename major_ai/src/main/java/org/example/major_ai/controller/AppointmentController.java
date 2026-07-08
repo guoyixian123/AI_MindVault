@@ -48,8 +48,12 @@ public class AppointmentController {
             @RequestBody AppointmentEntity appointment) {
         // 设置预约用户ID
         appointment.setUserId(user.getId());
-        AppointmentEntity created = appointmentService.create(appointment);
-        return ApiResponse.success("预约挂号成功", created);
+        try {
+            AppointmentEntity created = appointmentService.create(appointment);
+            return ApiResponse.success("预约挂号成功", created);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 
     /**

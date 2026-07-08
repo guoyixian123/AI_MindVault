@@ -2,6 +2,10 @@ package org.example.major_ai.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.major_ai.aiservice.ConsultantService;
@@ -14,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 /**
  * AI聊天流式接口
@@ -29,6 +35,7 @@ public class ChatController {
     private final ChatMessageService chatMessageService;
     private final ChatSessionService chatSessionService;
     private final HealthReportService healthReportService;
+    private final ChatMemoryStore chatMemoryStore;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -50,7 +57,7 @@ public class ChatController {
                 case "medicine" -> buildMedicinePrompt(json);
                 case "disease" -> buildDiseasePrompt(json);
                 case "report" -> buildReportPrompt(json);
-                default -> userMessage;
+                default -> buildFollowUpPrompt(memoryId, userMessage);
             };
 
             if ("chat".equals(scenario) && prompt.isBlank()) {
@@ -137,5 +144,34 @@ public class ChatController {
                 "5. 提示哪些指标需要复查或进一步检查\n\n" +
                 "报告类型：" + reportType + "\n" +
                 "报告内容：\n" + content;
+    }
+
+    /**
+     * 构建追问的Prompt，从 Redis 加载历史对话上下文
+     * Redis 中存储的是 LangChain4j 管理的真实对话（原始 prompt + AI 回复），
+     * 比 MySQL 中的标签更准确
+     */
+    private String buildFollowUpPrompt(String memoryId, String userMessage) {
+        List<ChatMessage> messages = chatMemoryStore.getMessages(memoryId);
+
+        if (messages == null || messages.isEmpty()) {
+            return userMessage;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("以下是之前的对话记录，请基于这些上下文回答用户的追问：\n\n");
+        sb.append("=== 对话历史 ===\n");
+        for (ChatMessage msg : messages) {
+            switch (msg.type()) {
+                case USER -> sb.append("用户：").append(((UserMessage) msg).singleText()).append("\n");
+                case AI -> sb.append("A.R.I.A：").append(((AiMessage) msg).text()).append("\n");
+                default -> { /* 跳过 SystemMessage */ }
+            }
+        }
+        sb.append("=== 对话历史结束 ===\n\n");
+        sb.append("用户的新问题：").append(userMessage);
+        sb.append("\n\n请基于以上对话历史回答用户的新问题。");
+
+        return sb.toString();
     }
 }

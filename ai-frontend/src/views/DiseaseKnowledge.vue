@@ -74,18 +74,40 @@
         </button>
       </div>
 
-      <!-- 加载动画 -->
-      <AILoadingIndicator v-if="loading && !result" label="A.R.I.A 正在查询中" />
-
-      <!-- 结果显示 -->
-      <div v-if="result" class="result-card">
+      <!-- 对话记录 -->
+      <div v-if="messages.length" class="result-card">
         <div class="result-header">
           <h3>{{ resultTitle }}</h3>
           <button class="copy-btn" @click="copyResult" title="复制">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
-        <div class="result-content markdown-body" :class="{ 'typing-cursor': isStreaming }" v-html="renderMarkdown(displayedContent)"></div>
+
+        <div v-for="(msg, i) in messages" :key="i" class="chat-block">
+          <div v-if="msg.role === 'user'" class="chat-user-msg">
+            <div class="chat-user-label">你的提问</div>
+            <div class="chat-user-text">{{ msg.content }}</div>
+          </div>
+          <div v-else class="chat-ai-msg">
+            <div class="chat-ai-label">A.R.I.A</div>
+            <div class="chat-ai-text markdown-body" v-html="renderMarkdown(msg.content)"></div>
+          </div>
+        </div>
+
+        <div v-if="loading" class="chat-ai-msg">
+          <AILoadingIndicator v-if="!displayedContent" label="A.R.I.A 正在查询中" />
+          <template v-else>
+            <div class="chat-ai-label">A.R.I.A</div>
+            <div class="chat-ai-text markdown-body typing-cursor" v-html="renderMarkdown(displayedContent)"></div>
+          </template>
+        </div>
+
+        <div v-if="!loading && messages.length" class="follow-up">
+          <input v-model="followUpText" type="text" placeholder="继续追问..." @keyup.enter="sendFollowUp" />
+          <button class="btn-send" @click="sendFollowUp" :disabled="!followUpText.trim()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -106,11 +128,16 @@ const diseaseB = ref('')
 const claim = ref('')
 const result = ref('')
 const resultTitle = ref('查询结果')
+const followUpText = ref('')
+const messages = ref([])
+let sessionId = ''
+let currentReply = ''
 
 const chatWs = useChatWebSocket()
 const { displayedContent, isStreaming, appendText, flush, resetStreaming } = useStreamingText()
 
 const onMessage = (data) => {
+  currentReply += data
   result.value += data
   appendText(data)
 }
@@ -119,14 +146,18 @@ const onDone = () => {
   const wait = setInterval(() => {
     if (!isStreaming.value) {
       clearInterval(wait)
-      flush(result.value)
+      flush(currentReply)
+      if (currentReply) {
+        messages.value.push({ role: 'assistant', content: currentReply })
+      }
       loading.value = false
+      currentReply = ''
     }
   }, 50)
 }
 
 const onError = (error) => {
-  console.error('WebSocket error:', error)
+  console.error('请求错误:', error)
   result.value = '查询失败，请确保后端服务正在运行。'
   loading.value = false
 }
@@ -193,17 +224,45 @@ function debunkClaim() {
 function callApi(body) {
   loading.value = true
   result.value = ''
+  currentReply = ''
+  messages.value = []
+  sessionId = 'disease-' + Date.now()
   resetStreaming()
 
+  const label = body.subScenario === 'knowledge' ? body.diseaseName
+    : body.subScenario === 'compare' ? `${body.diseaseName} vs ${body.compareWith}`
+    : body.claim
+  messages.value.push({ role: 'user', content: label })
+
   chatWs.send('', {
-    memoryId: 'disease-' + Date.now(),
+    memoryId: sessionId,
     scenario: 'disease',
     ...body
   })
 }
 
+function sendFollowUp() {
+  const text = followUpText.value.trim()
+  if (!text || loading.value) return
+
+  loading.value = true
+  result.value = ''
+  currentReply = ''
+  resetStreaming()
+
+  messages.value.push({ role: 'user', content: text })
+  followUpText.value = ''
+
+  chatWs.send('', {
+    memoryId: sessionId,
+    scenario: 'chat',
+    message: text
+  })
+}
+
 function copyResult() {
-  navigator.clipboard.writeText(result.value)
+  const last = messages.value.filter(m => m.role === 'assistant')
+  navigator.clipboard.writeText(last.length ? last[last.length - 1].content : result.value)
 }
 </script>
 
@@ -421,6 +480,21 @@ function copyResult() {
   border-radius: var(--radius-md);
   position: relative;
 }
+
+/* 对话块 */
+.chat-block { margin-bottom: 20px; }
+.chat-user-msg { margin-bottom: 16px; }
+.chat-user-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.chat-user-text { font-size: 14px; line-height: 1.6; color: var(--text-secondary); padding: 12px 16px; background: var(--color-paper); border-radius: var(--radius-md); }
+.chat-ai-msg { margin-bottom: 8px; }
+.chat-ai-label { font-size: 12px; font-weight: 600; color: var(--color-forest); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.chat-ai-text { font-size: 15px; line-height: 1.8; color: var(--text-primary); padding: 20px; background: var(--color-paper); border-radius: var(--radius-md); }
+.follow-up { display: flex; gap: 8px; margin-top: 20px; }
+.follow-up input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 15px; color: var(--text-primary); outline: none; transition: border-color var(--transition-fast); }
+.follow-up input:focus { border-color: var(--color-forest); }
+.btn-send { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: var(--color-forest); color: var(--color-white); border: none; border-radius: var(--radius-sm); cursor: pointer; transition: background var(--transition-fast); }
+.btn-send:hover:not(:disabled) { background: var(--color-forest-dark); }
+.btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .typing-cursor::after {
   content: '';

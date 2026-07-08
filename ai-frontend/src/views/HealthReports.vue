@@ -43,20 +43,41 @@
         </form>
       </div>
 
-      <!-- 加载动画 -->
-      <AILoadingIndicator v-if="analyzing && !result" label="A.R.I.A 正在解读报告" />
-
-      <!-- 解读结果 -->
-      <div v-if="result" class="section-card result-card">
+      <!-- 对话记录 -->
+      <div v-if="messages.length" class="section-card result-card">
         <div class="result-header">
           <h2>AI 解读结果</h2>
           <button class="copy-btn" @click="copyResult" title="复制">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
-        <div class="result-content markdown-body" :class="{ 'typing-cursor': isStreaming }">
-          <div v-html="renderMarkdown(displayedContent)"></div>
+
+        <div v-for="(msg, i) in messages" :key="i" class="chat-block">
+          <div v-if="msg.role === 'user'" class="chat-user-msg">
+            <div class="chat-user-label">你的提问</div>
+            <div class="chat-user-text">{{ msg.content }}</div>
+          </div>
+          <div v-else class="chat-ai-msg">
+            <div class="chat-ai-label">A.R.I.A</div>
+            <div class="chat-ai-text markdown-body" v-html="renderMarkdown(msg.content)"></div>
+          </div>
         </div>
+
+        <div v-if="analyzing" class="chat-ai-msg">
+          <AILoadingIndicator v-if="!displayedContent" label="A.R.I.A 正在解读报告" />
+          <template v-else>
+            <div class="chat-ai-label">A.R.I.A</div>
+            <div class="chat-ai-text markdown-body typing-cursor" v-html="renderMarkdown(displayedContent)"></div>
+          </template>
+        </div>
+
+        <div v-if="!analyzing && messages.length" class="follow-up">
+          <input v-model="followUpText" type="text" placeholder="继续追问..." @keyup.enter="sendFollowUp" />
+          <button class="btn-send" @click="sendFollowUp" :disabled="!followUpText.trim()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+
         <div class="result-actions">
           <button class="action-btn" @click="reset">继续解读其他报告</button>
         </div>
@@ -96,13 +117,18 @@ const result = ref('')
 const rawResult = ref('')
 const analyzing = ref(false)
 const history = ref([])
+const followUpText = ref('')
+const messages = ref([])
+let sessionId = ''
+let currentReply = ''
 
 const chatWs = useChatWebSocket()
 const { displayedContent, isStreaming, appendText, flush, resetStreaming } = useStreamingText()
 
 const onMessage = (data) => {
-  rawResult.value += data
+  currentReply += data
   result.value += data
+  rawResult.value += data
   appendText(data)
 }
 
@@ -110,14 +136,18 @@ const onDone = () => {
   const wait = setInterval(() => {
     if (!isStreaming.value) {
       clearInterval(wait)
-      flush(rawResult.value)
+      flush(currentReply)
+      if (currentReply) {
+        messages.value.push({ role: 'assistant', content: currentReply })
+      }
       analyzing.value = false
+      currentReply = ''
     }
   }, 50)
 }
 
 const onError = (error) => {
-  console.error('WebSocket error:', error)
+  console.error('请求错误:', error)
   result.value = '解读失败，请确保后端服务正在运行。'
   analyzing.value = false
 }
@@ -168,19 +198,22 @@ async function analyzeReport() {
   analyzing.value = true
   result.value = ''
   rawResult.value = ''
+  currentReply = ''
+  messages.value = []
+  sessionId = 'report-' + Date.now()
   resetStreaming()
 
+  messages.value.push({ role: 'user', content: `[体检报告] ${reportType.value}` })
+
   try {
-    // 先保存报告
     const uploadRes = await api.post('/api/health/reports/upload', {
       reportType: reportType.value,
       reportContent: reportContent.value
     })
     const reportId = uploadRes.data?.data?.id
 
-    // 通过 WebSocket 发送获取 AI 解读
     chatWs.send('', {
-      memoryId: 'report-' + Date.now(),
+      memoryId: sessionId,
       scenario: 'report',
       reportId: reportId,
       reportType: reportType.value,
@@ -193,15 +226,39 @@ async function analyzeReport() {
   }
 }
 
+function sendFollowUp() {
+  const text = followUpText.value.trim()
+  if (!text || analyzing.value) return
+
+  analyzing.value = true
+  result.value = ''
+  rawResult.value = ''
+  currentReply = ''
+  resetStreaming()
+
+  messages.value.push({ role: 'user', content: text })
+  followUpText.value = ''
+
+  chatWs.send('', {
+    memoryId: sessionId,
+    scenario: 'chat',
+    message: text
+  })
+}
+
 function reset() {
   reportContent.value = ''
   result.value = ''
   rawResult.value = ''
+  currentReply = ''
+  messages.value = []
+  sessionId = ''
   resetStreaming()
 }
 
 function copyResult() {
-  navigator.clipboard.writeText(rawResult.value || result.value)
+  const last = messages.value.filter(m => m.role === 'assistant')
+  navigator.clipboard.writeText(last.length ? last[last.length - 1].content : (rawResult.value || result.value))
 }
 
 function formatTime(timestamp) {
@@ -483,6 +540,21 @@ function formatTime(timestamp) {
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/* 对话块 */
+.chat-block { margin-bottom: 20px; }
+.chat-user-msg { margin-bottom: 16px; }
+.chat-user-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.chat-user-text { font-size: 14px; line-height: 1.6; color: var(--text-secondary); padding: 12px 16px; background: var(--color-paper); border-radius: var(--radius-md); }
+.chat-ai-msg { margin-bottom: 8px; }
+.chat-ai-label { font-size: 12px; font-weight: 600; color: var(--color-forest); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.chat-ai-text { font-size: 15px; line-height: 1.8; color: var(--text-primary); padding: 20px; background: var(--color-paper); border-radius: var(--radius-md); }
+.follow-up { display: flex; gap: 8px; margin-top: 20px; }
+.follow-up input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); font-size: 15px; color: var(--text-primary); outline: none; transition: border-color var(--transition-fast); }
+.follow-up input:focus { border-color: var(--color-forest); }
+.btn-send { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: var(--color-forest); color: var(--color-white); border: none; border-radius: var(--radius-sm); cursor: pointer; transition: background var(--transition-fast); }
+.btn-send:hover:not(:disabled) { background: var(--color-forest-dark); }
+.btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(10px); }

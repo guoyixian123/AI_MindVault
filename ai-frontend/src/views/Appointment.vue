@@ -24,7 +24,10 @@
           </div>
           <div class="form-group">
             <label>预约时间 *</label>
-            <input v-model="form.appointmentTime" type="datetime-local" required />
+            <div class="datetime-wrapper">
+              <svg class="datetime-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <input v-model="form.appointmentTime" type="datetime-local" :min="minDate" :max="maxDate" required />
+            </div>
           </div>
           <div class="form-group">
             <label>就诊诉求</label>
@@ -46,7 +49,10 @@
               <span class="apt-status" :class="apt.status.toLowerCase()">{{ statusText(apt.status) }}</span>
               <span class="apt-dept">{{ getDeptName(apt.departmentId) }}</span>
             </div>
-            <div class="apt-time">{{ formatTime(apt.appointmentTime) }}</div>
+            <div class="apt-time">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {{ formatTime(apt.appointmentTime) }}
+            </div>
             <div v-if="apt.complaint" class="apt-complaint">{{ apt.complaint }}</div>
             <button v-if="apt.status === 'PENDING'" class="cancel-btn" @click="cancelAppointment(apt.id)">取消预约</button>
           </div>
@@ -58,7 +64,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../utils/api'
 
 const departments = ref([])
@@ -70,6 +76,20 @@ const form = ref({
   departmentId: '',
   appointmentTime: '',
   complaint: ''
+})
+
+// 日期限制：明天 00:00 ~ 明天+30天 23:59
+const minDate = computed(() => {
+  const t = new Date()
+  t.setDate(t.getDate() + 1)
+  t.setHours(0, 0, 0, 0)
+  return t.toISOString().slice(0, 16)
+})
+const maxDate = computed(() => {
+  const t = new Date()
+  t.setDate(t.getDate() + 31)
+  t.setHours(23, 59, 0, 0)
+  return t.toISOString().slice(0, 16)
 })
 
 onMounted(async () => {
@@ -116,7 +136,8 @@ async function submitAppointment() {
       setTimeout(() => message.value = '', 3000)
     }
   } catch (e) {
-    alert('预约失败，请重试')
+    const msg = e?.response?.data?.message || '预约失败，请重试'
+    alert(msg)
   } finally {
     submitting.value = false
   }

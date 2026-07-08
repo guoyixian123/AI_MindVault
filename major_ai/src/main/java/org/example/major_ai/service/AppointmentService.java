@@ -6,6 +6,7 @@ import org.example.major_ai.entity.AppointmentEntity;
 import org.example.major_ai.mapper.AppointmentMapper;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -34,9 +35,35 @@ public class AppointmentService {
      * @return 创建成功的预约
      */
     public AppointmentEntity create(AppointmentEntity appointment) {
-        long now = System.currentTimeMillis();
-        appointment.setCreatedAt(now);
-        appointment.setUpdatedAt(now);
+        // ① 日期校验：必须在明天 00:00 ~ 明天+30天之内
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime tomorrow = now.plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime maxDate = now.plusDays(31).withHour(23).withMinute(59).withSecond(59).withNano(0);
+
+        if (appointment.getAppointmentTime() == null) {
+            throw new IllegalArgumentException("请选择预约时间");
+        }
+        if (appointment.getAppointmentTime().isBefore(tomorrow)) {
+            throw new IllegalArgumentException("预约时间不能早于明天");
+        }
+        if (appointment.getAppointmentTime().isAfter(maxDate)) {
+            throw new IllegalArgumentException("预约时间不能超过30天");
+        }
+
+        // ② 重复检查：同一科室 + 同一时间 + 非取消状态
+        Long count = appointmentMapper.selectCount(
+                new LambdaQueryWrapper<AppointmentEntity>()
+                        .eq(AppointmentEntity::getDepartmentId, appointment.getDepartmentId())
+                        .eq(AppointmentEntity::getAppointmentTime, appointment.getAppointmentTime())
+                        .ne(AppointmentEntity::getStatus, "CANCELLED")
+        );
+        if (count > 0) {
+            throw new IllegalArgumentException("该时段该科室已有预约，请选择其他时间");
+        }
+
+        long timestamp = System.currentTimeMillis();
+        appointment.setCreatedAt(timestamp);
+        appointment.setUpdatedAt(timestamp);
         appointment.setStatus("PENDING");  // 初始状态：待确认
 
         // SQL: INSERT INTO appointment(user_id, doctor_id, department_id, appointment_time, status, created_at, updated_at)
