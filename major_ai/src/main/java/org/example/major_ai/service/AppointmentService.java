@@ -50,7 +50,16 @@ public class AppointmentService {
             throw new IllegalArgumentException("预约时间不能超过30天");
         }
 
-        // ② 重复检查：同一科室 + 同一时间 + 非取消状态
+        // ② 时段校验：上午 9:00-12:00，下午 14:00-18:00
+        int hour = appointment.getAppointmentTime().getHour();
+        int minute = appointment.getAppointmentTime().getMinute();
+        boolean validMorning = hour >= 9 && hour < 12;
+        boolean validAfternoon = hour >= 14 && hour < 18;
+        if ((!validMorning && !validAfternoon) || minute % 30 != 0) {
+            throw new IllegalArgumentException("预约时间仅支持 上午9:00-12:00 或 下午14:00-18:00，每30分钟一个时段");
+        }
+
+        // ③ 重复检查：同一科室 + 同一时间 + 非取消状态
         Long count = appointmentMapper.selectCount(
                 new LambdaQueryWrapper<AppointmentEntity>()
                         .eq(AppointmentEntity::getDepartmentId, appointment.getDepartmentId())

@@ -24,9 +24,13 @@
           </div>
           <div class="form-group">
             <label>预约时间 *</label>
-            <div class="datetime-wrapper">
-              <svg class="datetime-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <input v-model="form.appointmentTime" type="datetime-local" :min="minDate" :max="maxDate" required />
+            <div class="datetime-row">
+              <input v-model="form.appointmentDate" type="date" :min="minDate" :max="maxDate" required />
+              <select v-model="form.appointmentTimeSlot" required>
+                <option value="">请选择时段</option>
+                <option v-for="t in morningSlots" :key="t" :value="t">上午 {{ t }}</option>
+                <option v-for="t in afternoonSlots" :key="t" :value="t">下午 {{ t }}</option>
+              </select>
             </div>
           </div>
           <div class="form-group">
@@ -74,22 +78,25 @@ const message = ref('')
 
 const form = ref({
   departmentId: '',
-  appointmentTime: '',
+  appointmentDate: '',
+  appointmentTimeSlot: '',
   complaint: ''
 })
 
-// 日期限制：明天 00:00 ~ 明天+30天 23:59
+// 可选时段：上午 9:00-12:00，下午 14:00-18:00，每30分钟
+const morningSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30']
+const afternoonSlots = ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30']
+
+// 日期限制（纯日期，给 type="date" 用）
 const minDate = computed(() => {
   const t = new Date()
   t.setDate(t.getDate() + 1)
-  t.setHours(0, 0, 0, 0)
-  return t.toISOString().slice(0, 16)
+  return t.toISOString().slice(0, 10)
 })
 const maxDate = computed(() => {
   const t = new Date()
   t.setDate(t.getDate() + 31)
-  t.setHours(23, 59, 0, 0)
-  return t.toISOString().slice(0, 16)
+  return t.toISOString().slice(0, 10)
 })
 
 onMounted(async () => {
@@ -120,18 +127,25 @@ async function loadAppointments() {
 }
 
 async function submitAppointment() {
-  if (!form.value.departmentId || !form.value.appointmentTime) {
+  if (!form.value.departmentId || !form.value.appointmentDate || !form.value.appointmentTimeSlot) {
     alert('请填写完整信息')
     return
   }
 
+  // 拼合日期和时间
+  const appointmentTime = form.value.appointmentDate + ' ' + form.value.appointmentTimeSlot + ':00'
+
   submitting.value = true
   message.value = ''
   try {
-    const { data } = await api.post('/api/appointment', form.value)
+    const { data } = await api.post('/api/appointment', {
+      departmentId: form.value.departmentId,
+      appointmentTime,
+      complaint: form.value.complaint
+    })
     if (data.code === 200) {
       message.value = '预约成功！'
-      form.value = { departmentId: '', appointmentTime: '', complaint: '' }
+      form.value = { departmentId: '', appointmentDate: '', appointmentTimeSlot: '', complaint: '' }
       await loadAppointments()
       setTimeout(() => message.value = '', 3000)
     }
@@ -262,6 +276,30 @@ function formatTime(time) {
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
+  border-color: var(--color-forest);
+}
+
+/* 日期 + 时段并排 */
+.datetime-row {
+  display: flex;
+  gap: 12px;
+}
+
+.datetime-row input,
+.datetime-row select {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+  background: var(--color-white);
+}
+
+.datetime-row input:focus,
+.datetime-row select:focus {
   border-color: var(--color-forest);
 }
 
