@@ -9,15 +9,35 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.*;
 
+/**
+ * 管理后台仪表盘控制器
+ * 提供系统统计数据和图表数据
+ *
+ * API前缀：/api/admin/dashboard
+ *
+ * 功能：
+ * - 概览统计数据
+ * - 近7日问诊趋势
+ * - 科室问诊排行
+ * - 预约状态分布
+ *
+ * 权限：需要ROOT_ADMIN或DOCTOR角色
+ */
 @RestController
 @RequestMapping("/api/admin/dashboard")
 @RequiredArgsConstructor
 public class AdminDashboardController {
 
+    /** JDBC模板，用于执行原生SQL查询 */
     private final JdbcTemplate jdbcTemplate;
 
     /**
      * 获取概览统计数据
+     *
+     * 请求：GET /api/admin/dashboard/stats
+     * 响应：{"code": 200, "data": {"pendingPosts": 5, "pendingAppointments": 3, ...}}
+     *
+     * @return 统计数据
      */
     @GetMapping("/stats")
     public ApiResponse<Map<String, Object>> getStats() {
@@ -56,6 +76,11 @@ public class AdminDashboardController {
 
     /**
      * 获取近7日问诊趋势
+     *
+     * 请求：GET /api/admin/dashboard/consultation-trend
+     * 响应：{"code": 200, "data": [{"day": "一", "date": "2024-01-15", "value": 5}, ...]}
+     *
+     * @return 趋势数据（近7天每天的问诊数量）
      */
     @GetMapping("/consultation-trend")
     public ApiResponse<List<Map<String, Object>>> getConsultationTrend() {
@@ -116,7 +141,12 @@ public class AdminDashboardController {
     }
 
     /**
-     * 获取科室问诊排行
+     * 获取科室问诊排行（Top5）
+     *
+     * 请求：GET /api/admin/dashboard/department-rank
+     * 响应：{"code": 200, "data": [{"name": "内科", "count": 50}, ...]}
+     *
+     * @return 科室排行数据
      */
     @GetMapping("/department-rank")
     public ApiResponse<List<Map<String, Object>>> getDepartmentRank() {
@@ -139,6 +169,11 @@ public class AdminDashboardController {
 
     /**
      * 获取预约状态分布
+     *
+     * 请求：GET /api/admin/dashboard/appointment-distribution
+     * 响应：{"code": 200, "data": {"PENDING": 5, "CONFIRMED": 10, "COMPLETED": 20, "CANCELLED": 3}}
+     *
+     * @return 预约状态分布数据
      */
     @GetMapping("/appointment-distribution")
     public ApiResponse<Map<String, Object>> getAppointmentDistribution() {
