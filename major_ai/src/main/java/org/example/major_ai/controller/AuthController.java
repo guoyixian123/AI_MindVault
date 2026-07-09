@@ -118,43 +118,4 @@ public class AuthController {
         return ApiResponse.success("注册成功", response);
     }
 
-    /**
-     * 获取当前登录用户信息
-     *
-     * 请求：GET /api/auth/me
-     * 请求头：Authorization: Bearer {token}
-     * 响应：{"code": 200, "data": {"userId": 1, "username": "admin", ...}}
-     *
-     * @param authHeader Authorization请求头（Bearer token）
-     * @return 用户信息，认证失败返回401错误
-     */
-    @GetMapping("/me")
-    public ApiResponse<LoginResponse> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
-        try {
-            // 从Authorization头提取Token（去掉"Bearer "前缀）
-            String token = authHeader.substring(7);
-
-            // 从Token中解析用户ID
-            Long userId = jwtUtil.getUserIdFromToken(token);
-
-            // 查询用户信息
-            UserEntity user = userService.findById(userId);
-            if (user == null) {
-                return ApiResponse.error(404, "用户不存在");
-            }
-
-            // 构建响应（不返回新Token）
-            LoginResponse response = new LoginResponse(
-                    null, // 不返回新token
-                    user.getId(),
-                    user.getUsername(),
-                    user.getNickname(),
-                    user.getRole(),
-                    user.getDepartmentId()
-            );
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            return ApiResponse.error(401, "认证失败");
-        }
-    }
 }

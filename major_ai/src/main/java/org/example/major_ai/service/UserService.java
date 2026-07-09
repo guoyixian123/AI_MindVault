@@ -139,22 +139,6 @@ public class UserService {
     }
 
     /**
-     * 查询指定科室的医生列表
-     *
-     * @param departmentId 科室ID
-     * @return 医生列表（角色为DOCTOR，状态为启用）
-     */
-    public List<UserEntity> listDoctorsByDepartment(Long departmentId) {
-        // SQL: SELECT * FROM `user` WHERE role = 'DOCTOR' AND department_id = ? AND status = 1
-        return userMapper.selectList(
-                new LambdaQueryWrapper<UserEntity>()
-                        .eq(UserEntity::getRole, "DOCTOR")
-                        .eq(UserEntity::getDepartmentId, departmentId)
-                        .eq(UserEntity::getStatus, 1)
-        );
-    }
-
-    /**
      * 验证密码
      *
      * @param user 用户实体

@@ -38,17 +38,6 @@ public class DepartmentService {
     }
 
     /**
-     * 根据ID查询科室
-     *
-     * @param id 科室ID
-     * @return 科室实体，不存在返回null
-     */
-    public DepartmentEntity findById(Long id) {
-        // SQL: SELECT * FROM department WHERE id = ?
-        return departmentMapper.selectById(id);
-    }
-
-    /**
      * 创建科室
      *
      * @param department 科室实体

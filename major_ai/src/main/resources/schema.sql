@@ -74,23 +74,6 @@ CREATE TABLE IF NOT EXISTS health_profile (
     FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE
 );
 
--- 日常健康数据记录
-CREATE TABLE IF NOT EXISTS health_record (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    record_date DATE NOT NULL,
-    blood_pressure_sys INT,
-    blood_pressure_dia INT,
-    blood_sugar DECIMAL(4,1),
-    steps INT,
-    sleep_hours DECIMAL(3,1),
-    body_temperature DECIMAL(3,1),
-    menstrual_note VARCHAR(200) COMMENT '生理期记录',
-    created_at BIGINT NOT NULL,
-    INDEX idx_user_date (user_id, record_date),
-    FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE
-);
-
 -- 体检报告
 CREATE TABLE IF NOT EXISTS health_report (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
