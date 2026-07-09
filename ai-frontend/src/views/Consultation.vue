@@ -32,7 +32,7 @@
             <span class="post-dept">{{ getDeptName(post.departmentId) }}</span>
           </div>
           <h3 class="post-title">{{ post.title }}</h3>
-          <p class="post-preview">{{ post.content.substring(0, 100) }}...</p>
+          <p class="post-preview">{{ (post.content || '').substring(0, 100) }}{{ post.content && post.content.length > 100 ? '...' : '' }}</p>
           <div class="post-footer">
             <span class="post-time">{{ formatTime(post.createdAt) }}</span>
           </div>
@@ -118,7 +118,7 @@ async function loadPosts() {
       posts.value = data.data || []
     }
   } catch (e) {
-    console.error('Failed to load posts:', e)
+    toast.error('加载帖子失败')
   }
 }
 

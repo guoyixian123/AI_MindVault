@@ -122,7 +122,7 @@ async function loadHistory() {
               sessionId: session.id,
               type,
               title: session.title,
-              preview: aiMsg ? aiMsg.content.substring(0, 80) + '...' : '',
+              preview: aiMsg?.content ? aiMsg.content.substring(0, 80) + '...' : '',
               updatedAt: session.updatedAt,
               messages
             })
@@ -142,7 +142,7 @@ async function loadHistory() {
               sessionId: 'report-' + report.id,
               type: 'report',
               title: report.reportType,
-              preview: report.aiAnalysis?.substring(0, 80) + '...' || '',
+              preview: report.aiAnalysis ? report.aiAnalysis.substring(0, 80) + '...' : '',
               updatedAt: report.createdAt,
               messages: [
                 { role: 'user', content: report.reportContent },
