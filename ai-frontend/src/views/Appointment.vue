@@ -41,7 +41,6 @@
             {{ submitting ? '提交中...' : '提交预约' }}
           </button>
         </form>
-        <div v-if="message" class="success-msg">{{ message }}</div>
       </div>
 
       <!-- 我的预约 -->
@@ -76,11 +75,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '../utils/api'
+import { toast } from '../composables/useToast'
 
 const departments = ref([])
 const appointments = ref([])
 const submitting = ref(false)
-const message = ref('')
 
 const form = ref({
   departmentId: '',
@@ -134,7 +133,7 @@ async function loadAppointments() {
 
 async function submitAppointment() {
   if (!form.value.departmentId || !form.value.appointmentDate || !form.value.appointmentTimeSlot) {
-    alert('请填写完整信息')
+    toast.warning('请填写完整信息')
     return
   }
 
@@ -142,7 +141,6 @@ async function submitAppointment() {
   const appointmentTime = form.value.appointmentDate + 'T' + form.value.appointmentTimeSlot + ':00'
 
   submitting.value = true
-  message.value = ''
   try {
     const { data } = await api.post('/api/appointment', {
       departmentId: form.value.departmentId,
@@ -150,16 +148,14 @@ async function submitAppointment() {
       complaint: form.value.complaint
     })
     if (data.code === 200) {
-      message.value = '预约成功！'
+      toast.success('预约成功！')
       form.value = { departmentId: '', appointmentDate: '', appointmentTimeSlot: '', complaint: '' }
       await loadAppointments()
-      setTimeout(() => message.value = '', 3000)
     } else {
-      alert(data.message || '预约失败，请重试')
+      toast.error(data.message || '预约失败，请重试')
     }
   } catch (e) {
-    const msg = e?.response?.data?.message || '预约失败，请重试'
-    alert(msg)
+    toast.error(e?.response?.data?.message || '预约失败，请重试')
   } finally {
     submitting.value = false
   }
@@ -170,12 +166,13 @@ async function cancelAppointment(id) {
   try {
     const { data } = await api.put(`/api/appointment/${id}/cancel`)
     if (data.code === 200) {
+      toast.success('预约已取消')
       await loadAppointments()
     } else {
-      alert(data.message || '取消失败')
+      toast.error(data.message || '取消失败')
     }
   } catch (e) {
-    alert('取消失败')
+    toast.error('取消失败')
   }
 }
 
@@ -352,16 +349,6 @@ function formatTimeOnly(time) {
 .submit-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.success-msg {
-  text-align: center;
-  color: var(--color-success);
-  margin-top: 16px;
-  padding: 12px;
-  background: rgba(58, 114, 80, 0.08);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
 }
 
 .appointment-list {

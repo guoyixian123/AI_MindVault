@@ -49,8 +49,7 @@
             {{ saving ? '保存中...' : '保存今日数据' }}
           </button>
         </form>
-        <div v-if="message" class="success-msg">{{ message }}</div>
-      </div>
+              </div>
 
       <!-- 趋势图 -->
       <div class="section-card">
@@ -93,13 +92,13 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { useHealthStore } from '../stores/health'
+import { toast } from '../composables/useToast'
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
 
 const healthStore = useHealthStore()
 const saving = ref(false)
-const message = ref('')
 const records = ref([])
 const warnings = ref([])
 const selectedIndicator = ref('blood_pressure_sys')
@@ -185,17 +184,17 @@ function renderChart(data) {
 
 async function saveRecord() {
   saving.value = true
-  message.value = ''
   try {
     const data = await healthStore.saveRecord(form.value)
     if (data.code === 200) {
-      message.value = '数据保存成功！'
+      toast.success('数据保存成功！')
       await loadRecords()
       await loadTrend()
-      setTimeout(() => message.value = '', 3000)
+    } else {
+      toast.error(data.message || '保存失败')
     }
   } catch (e) {
-    alert('保存失败')
+    toast.error('保存失败')
   } finally {
     saving.value = false
   }
@@ -321,16 +320,6 @@ async function saveRecord() {
 .submit-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.success-msg {
-  color: var(--color-success);
-  font-size: 14px;
-  margin-top: 16px;
-  padding: 12px;
-  background: rgba(58, 114, 80, 0.08);
-  border-radius: var(--radius-sm);
-  text-align: center;
 }
 
 .trend-tabs {
