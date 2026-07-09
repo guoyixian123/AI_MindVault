@@ -77,6 +77,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
+import { toast } from '../composables/useToast'
 
 const router = useRouter()
 const departments = ref([])
@@ -123,7 +124,7 @@ async function loadPosts() {
 
 async function submitPost() {
   if (!postForm.value.departmentId || !postForm.value.title.trim() || !postForm.value.content.trim()) {
-    alert('请填写完整信息')
+    toast.warning('请填写完整信息')
     return
   }
 
@@ -134,9 +135,12 @@ async function submitPost() {
       showForm.value = false
       postForm.value = { departmentId: '', title: '', content: '' }
       await loadPosts()
+      toast.success('发布成功！')
+    } else {
+      toast.error(data.message || '发布失败，请重试')
     }
   } catch (e) {
-    alert('发布失败，请重试')
+    toast.error('发布失败，请重试')
   } finally {
     submitting.value = false
   }
