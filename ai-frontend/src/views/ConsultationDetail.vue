@@ -14,6 +14,7 @@
     <div class="page-content">
       <div v-if="post" class="detail-card">
         <div class="post-header">
+          <span class="post-user">{{ post.userName || '匿名用户' }}</span>
           <span class="post-status" :class="post.status.toLowerCase()">{{ statusText(post.status) }}</span>
           <span class="post-time">{{ formatTime(post.createdAt) }}</span>
         </div>

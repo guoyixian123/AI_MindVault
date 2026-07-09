@@ -55,7 +55,7 @@
             <tbody>
               <tr v-for="apt in appointments" :key="apt.id">
                 <td>{{ apt.id }}</td>
-                <td>{{ apt.userId }}</td>
+                <td>{{ apt.userName || '用户 #' + apt.userId }}</td>
                 <td>{{ getDeptName(apt.departmentId) }}</td>
                 <td>{{ formatTime(apt.appointmentTime) }}</td>
                 <td>{{ apt.complaint || '-' }}</td>

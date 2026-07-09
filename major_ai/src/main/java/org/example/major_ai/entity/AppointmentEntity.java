@@ -70,4 +70,8 @@ public class AppointmentEntity {
     /** 更新时间（时间戳，毫秒） */
     @TableField("updated_at")
     private Long updatedAt;
+
+    /** 预约人昵称（非数据库字段，查询时填充） */
+    @TableField(exist = false)
+    private String userName;
 }

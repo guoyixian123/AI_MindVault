@@ -87,7 +87,7 @@
               <h3>医生回复</h3>
               <div v-for="reply in replies" :key="reply.id" class="reply-item">
                 <div class="reply-header">
-                  <span>👨‍⚕️ 医生</span>
+                  <span>👨‍⚕️ {{ reply.doctorName || '医生' }}</span>
                   <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
                 </div>
                 <div class="reply-content">{{ reply.content }}</div>

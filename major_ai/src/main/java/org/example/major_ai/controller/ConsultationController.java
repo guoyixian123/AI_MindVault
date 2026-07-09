@@ -78,6 +78,7 @@ public class ConsultationController {
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String status) {
         List<ConsultationPostEntity> posts = consultationService.listPosts(departmentId, status);
+        fillUserNames(posts);
         return ApiResponse.success(posts);
     }
 
@@ -102,12 +103,15 @@ public class ConsultationController {
         // 查询回复列表
         List<DoctorReplyEntity> replies = consultationService.listReplies(id);
 
-        // 填充医生姓名
+        // 填充发帖人昵称
+        fillUserName(post);
+
+        // 填充医生昵称
         for (DoctorReplyEntity reply : replies) {
             if (reply.getDoctorId() != null) {
                 UserEntity doctor = userService.findById(reply.getDoctorId());
                 if (doctor != null) {
-                    reply.setDoctorName(doctor.getUsername());
+                    reply.setDoctorName(doctor.getNickname() != null ? doctor.getNickname() : doctor.getUsername());
                 }
             }
         }
@@ -133,7 +137,24 @@ public class ConsultationController {
     public ApiResponse<List<ConsultationPostEntity>> myPosts(
             @AuthenticationPrincipal UserDetailsImpl user) {
         List<ConsultationPostEntity> posts = consultationService.listPostsByUserId(user.getId());
+        fillUserNames(posts);
         return ApiResponse.success(posts);
+    }
+
+    /** 为帖子列表填充发帖人昵称 */
+    private void fillUserNames(List<ConsultationPostEntity> posts) {
+        for (ConsultationPostEntity post : posts) {
+            fillUserName(post);
+        }
+    }
+
+    private void fillUserName(ConsultationPostEntity post) {
+        if (post.getUserId() != null) {
+            UserEntity u = userService.findById(post.getUserId());
+            if (u != null) {
+                post.setUserName(u.getNickname() != null ? u.getNickname() : u.getUsername());
+            }
+        }
     }
 
     /**

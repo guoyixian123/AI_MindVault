@@ -32,4 +32,8 @@ public class ConsultationPostEntity {
 
     @TableField("updated_at")
     private Long updatedAt;
+
+    /** 发帖人昵称（非数据库字段，查询时填充） */
+    @TableField(exist = false)
+    private String userName;
 }

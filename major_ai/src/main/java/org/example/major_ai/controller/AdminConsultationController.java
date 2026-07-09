@@ -69,18 +69,12 @@ public class AdminConsultationController {
             // ROOT_ADMIN可以看到所有帖子
             posts = consultationService.listPosts(null, status);
         }
+        fillUserNames(posts);
         return ApiResponse.success(posts);
     }
 
     /**
      * 查看帖子详情
-     *
-     * 请求：GET /api/admin/consultation/posts/{id}
-     * 请求头：Authorization: Bearer {token}（需要ROOT_ADMIN或DOCTOR角色）
-     * 响应：{"code": 200, "data": {"post": {...}, "replies": [{...}]}}
-     *
-     * @param id 帖子ID
-     * @return 帖子详情和回复列表
      */
     @GetMapping("/posts/{id}")
     public ApiResponse<Map<String, Object>> getPostDetail(@PathVariable Long id) {
@@ -89,12 +83,42 @@ public class AdminConsultationController {
             return ApiResponse.error(404, "帖子不存在");
         }
 
+        fillUserName(post);
+
         List<DoctorReplyEntity> replies = consultationService.listReplies(id);
+        for (DoctorReplyEntity reply : replies) {
+            if (reply.getDoctorId() != null) {
+                UserEntity doctor = userService.findById(reply.getDoctorId());
+                if (doctor != null) {
+                    reply.setDoctorName(doctor.getNickname() != null ? doctor.getNickname() : doctor.getUsername());
+                }
+            }
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("post", post);
         result.put("replies", replies);
         return ApiResponse.success(result);
+    }
+
+    private void fillUserNames(List<ConsultationPostEntity> posts) {
+        for (ConsultationPostEntity post : posts) {
+            if (post.getUserId() != null) {
+                UserEntity u = userService.findById(post.getUserId());
+                if (u != null) {
+                    post.setUserName(u.getNickname() != null ? u.getNickname() : u.getUsername());
+                }
+            }
+        }
+    }
+
+    private void fillUserName(ConsultationPostEntity post) {
+        if (post.getUserId() != null) {
+            UserEntity u = userService.findById(post.getUserId());
+            if (u != null) {
+                post.setUserName(u.getNickname() != null ? u.getNickname() : u.getUsername());
+            }
+        }
     }
 
     /**

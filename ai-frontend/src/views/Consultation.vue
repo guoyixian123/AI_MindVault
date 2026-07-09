@@ -28,6 +28,7 @@
       <div class="post-list">
         <div v-for="post in posts" :key="post.id" class="post-card" @click="viewPost(post.id)">
           <div class="post-header">
+            <span class="post-user">{{ post.userName || '匿名用户' }}</span>
             <span class="post-status" :class="post.status.toLowerCase()">{{ statusText(post.status) }}</span>
             <span class="post-dept">{{ getDeptName(post.departmentId) }}</span>
           </div>

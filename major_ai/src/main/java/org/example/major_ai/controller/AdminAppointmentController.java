@@ -67,7 +67,19 @@ public class AdminAppointmentController {
                 appointments = appointmentService.listByDoctorId(doctor.getId());
             }
         }
+        fillUserNames(appointments);
         return ApiResponse.success(appointments);
+    }
+
+    private void fillUserNames(List<AppointmentEntity> appointments) {
+        for (AppointmentEntity apt : appointments) {
+            if (apt.getUserId() != null) {
+                UserEntity u = userService.findById(apt.getUserId());
+                if (u != null) {
+                    apt.setUserName(u.getNickname() != null ? u.getNickname() : u.getUsername());
+                }
+            }
+        }
     }
 
     /**
