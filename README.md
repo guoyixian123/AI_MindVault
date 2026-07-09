@@ -1,4 +1,4 @@
-# AI_MindVault - 医疗健康智能问诊助手
+# AI_MindVault - 医疗健康智能问诊助手 1.1
 
 基于 LangChain4j + RAG 的医疗健康智能问诊系统，AI 顾问 **A.R.I.A**（Advanced Responsive Intelligent Advisor）提供专业、通俗的健康咨询服务，支持 HTTP 流式输出、Redis 会话记忆、RAG 知识库检索、预约挂号、社区问诊等功能。
 
