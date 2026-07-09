@@ -79,7 +79,7 @@
           {{ saving ? '保存中...' : '保存档案' }}
         </button>
 
-        <div v-if="message" class="success-msg">{{ message }}</div>
+        <div v-if="message" :class="isError ? 'error-msg' : 'success-msg'">{{ message }}</div>
       </form>
     </div>
   </div>
@@ -92,6 +92,8 @@ import { useHealthStore } from '../stores/health'
 const healthStore = useHealthStore()
 const saving = ref(false)
 const message = ref('')
+
+const isError = ref(false)
 
 const form = ref({
   height: null,
@@ -124,14 +126,19 @@ onMounted(async () => {
 async function saveProfile() {
   saving.value = true
   message.value = ''
+  isError.value = false
   try {
     const data = await healthStore.saveProfile(form.value)
     if (data.code === 200) {
       message.value = '健康档案保存成功！'
       setTimeout(() => message.value = '', 3000)
+    } else {
+      isError.value = true
+      message.value = data.message || '保存失败，请重试'
     }
   } catch (e) {
-    alert('保存失败，请重试')
+    isError.value = true
+    message.value = e?.response?.data?.message || '保存失败，请重试'
   } finally {
     saving.value = false
   }
@@ -274,6 +281,16 @@ async function saveProfile() {
   margin-top: 16px;
   padding: 12px;
   background: rgba(58, 114, 80, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.error-msg {
+  text-align: center;
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(220, 38, 38, 0.08);
   border-radius: var(--radius-sm);
 }
 </style>
