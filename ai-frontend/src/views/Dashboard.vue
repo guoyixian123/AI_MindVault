@@ -229,7 +229,6 @@ async function loadData() {
     console.error('Failed to load data:', e)
     if (e.response?.status === 401) {
       authStore.logout()
-      router.push('/login')
     }
   }
 }
@@ -276,7 +275,6 @@ function formatTime(t) {
 function handleLogout() {
   dropdownOpen.value = false
   authStore.logout()
-  router.push('/')
 }
 </script>
 

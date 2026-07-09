@@ -139,7 +139,6 @@ onMounted(async () => {
 
 function handleLogout() {
   authStore.logout()
-  router.push('/login')
 }
 
 async function loadPosts() {

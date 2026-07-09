@@ -201,7 +201,6 @@ function handleClickOutside(event) {
 function handleLogout() {
   dropdownOpen.value = false
   authStore.logout()
-  router.push('/')
 }
 
 onMounted(() => {
