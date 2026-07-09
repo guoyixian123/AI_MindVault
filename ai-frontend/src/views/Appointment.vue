@@ -139,7 +139,7 @@ async function submitAppointment() {
   }
 
   // 拼合日期和时间
-  const appointmentTime = form.value.appointmentDate + ' ' + form.value.appointmentTimeSlot + ':00'
+  const appointmentTime = form.value.appointmentDate + 'T' + form.value.appointmentTimeSlot + ':00'
 
   submitting.value = true
   message.value = ''
@@ -168,8 +168,12 @@ async function submitAppointment() {
 async function cancelAppointment(id) {
   if (!confirm('确定取消该预约吗？')) return
   try {
-    await api.put(`/api/appointment/${id}/cancel`)
-    await loadAppointments()
+    const { data } = await api.put(`/api/appointment/${id}/cancel`)
+    if (data.code === 200) {
+      await loadAppointments()
+    } else {
+      alert(data.message || '取消失败')
+    }
   } catch (e) {
     alert('取消失败')
   }
@@ -184,21 +188,25 @@ function statusText(status) {
   return map[status] || status
 }
 
-function formatTime(time) {
-  if (!time) return ''
-  return new Date(time).toLocaleString('zh-CN')
+function safeParseDate(time) {
+  if (!time) return null
+  // 兼容 Safari：将空格分隔的日期转为 T 分隔
+  const d = new Date(time.replace(' ', 'T'))
+  return isNaN(d.getTime()) ? null : d
 }
 
 function formatDate(time) {
   if (!time) return ''
-  const d = new Date(time)
+  const d = safeParseDate(time)
+  if (!d) return time
   const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${week[d.getDay()]}`
 }
 
 function formatTimeOnly(time) {
   if (!time) return ''
-  const d = new Date(time)
+  const d = safeParseDate(time)
+  if (!d) return time
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 </script>

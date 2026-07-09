@@ -58,7 +58,7 @@ public class AdminAppointmentController {
 
         if ("ROOT_ADMIN".equals(doctor.getRole())) {
             // ROOT_ADMIN查看所有预约
-            appointments = appointmentService.listByDoctorId(null);
+            appointments = appointmentService.listAll();
         } else {
             // 医生查看自己科室的预约
             if (doctor.getDepartmentId() != null) {
@@ -93,7 +93,11 @@ public class AdminAppointmentController {
             @AuthenticationPrincipal UserDetailsImpl user,
             @PathVariable Long id,
             @RequestParam String status) {
-        appointmentService.updateStatus(id, status);
-        return ApiResponse.success("预约状态更新成功", null);
+        try {
+            appointmentService.updateStatus(id, status);
+            return ApiResponse.success("预约状态更新成功", null);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 }

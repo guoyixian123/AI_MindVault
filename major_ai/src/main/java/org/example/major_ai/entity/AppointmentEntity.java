@@ -54,7 +54,7 @@ public class AppointmentEntity {
 
     /** 预约时间 */
     @TableField("appointment_time")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime appointmentTime;
 
     /** 主诉/症状描述 */
