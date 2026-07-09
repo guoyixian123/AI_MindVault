@@ -104,33 +104,6 @@ CREATE TABLE IF NOT EXISTS health_report (
     FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE
 );
 
--- 慢病专项档案
-CREATE TABLE IF NOT EXISTS chronic_disease (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    disease_type VARCHAR(50) NOT NULL COMMENT '糖尿病/高血压/痛风/甲减等',
-    diagnosis_date DATE,
-    doctor_notes TEXT,
-    current_medications TEXT,
-    created_at BIGINT NOT NULL,
-    updated_at BIGINT NOT NULL,
-    INDEX idx_user_id (user_id),
-    FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE
-);
-
--- 慢病指标记录
-CREATE TABLE IF NOT EXISTS chronic_record (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    chronic_disease_id BIGINT NOT NULL,
-    record_date DATE NOT NULL,
-    indicator_name VARCHAR(50) NOT NULL,
-    indicator_value VARCHAR(50) NOT NULL,
-    notes VARCHAR(500),
-    created_at BIGINT NOT NULL,
-    INDEX idx_chronic_date (chronic_disease_id, record_date),
-    FOREIGN KEY (chronic_disease_id) REFERENCES chronic_disease(id) ON DELETE CASCADE
-);
-
 -- 问诊帖子
 CREATE TABLE IF NOT EXISTS consultation_post (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
