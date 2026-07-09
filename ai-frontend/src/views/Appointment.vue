@@ -154,6 +154,8 @@ async function submitAppointment() {
       form.value = { departmentId: '', appointmentDate: '', appointmentTimeSlot: '', complaint: '' }
       await loadAppointments()
       setTimeout(() => message.value = '', 3000)
+    } else {
+      alert(data.message || '预约失败，请重试')
     }
   } catch (e) {
     const msg = e?.response?.data?.message || '预约失败，请重试'

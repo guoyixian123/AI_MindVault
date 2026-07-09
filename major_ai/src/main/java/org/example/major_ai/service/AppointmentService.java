@@ -59,7 +59,18 @@ public class AppointmentService {
             throw new IllegalArgumentException("预约时间仅支持 上午9:00-12:00 或 下午14:00-18:00，每30分钟一个时段");
         }
 
-        // ③ 重复检查：同一科室 + 同一时间 + 非取消状态
+        // ③ 重复检查：同一用户 + 同一时间 + 非取消状态（同一用户不能同时约多个号）
+        Long userCount = appointmentMapper.selectCount(
+                new LambdaQueryWrapper<AppointmentEntity>()
+                        .eq(AppointmentEntity::getUserId, appointment.getUserId())
+                        .eq(AppointmentEntity::getAppointmentTime, appointment.getAppointmentTime())
+                        .ne(AppointmentEntity::getStatus, "CANCELLED")
+        );
+        if (userCount > 0) {
+            throw new IllegalArgumentException("该时段您已有预约，请选择其他时间");
+        }
+
+        // ④ 重复检查：同一科室 + 同一时间 + 非取消状态
         Long count = appointmentMapper.selectCount(
                 new LambdaQueryWrapper<AppointmentEntity>()
                         .eq(AppointmentEntity::getDepartmentId, appointment.getDepartmentId())
