@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { toast } from '../composables/useToast'
 
 const routes = [
   // 公共页面
@@ -143,8 +144,9 @@ router.beforeEach((to, from, next) => {
       return
     }
 
-    // 普通用户访问管理页面 → 重定向到首页
+    // 普通用户访问管理页面 → 提示并重定向
     if (!isAdmin && to.meta.requiresAdmin) {
+      toast.error('权限不足，您没有管理员权限')
       next('/')
       return
     }
