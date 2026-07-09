@@ -157,6 +157,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useChatWebSocket } from '../utils/streaming'
 import { renderMarkdown } from '../utils/markedConfig'
 import { useStreamingText } from '../composables/useStreamingText'
+import { toast } from '../composables/useToast'
 import AILoadingIndicator from '../components/AILoadingIndicator.vue'
 
 const step = ref(1)
@@ -198,7 +199,7 @@ const onDone = () => {
 
 const onError = (error) => {
   console.error('请求错误:', error)
-  alert('自查失败，请稍后重试')
+  toast.error('自查失败，请稍后重试')
   loading.value = false
 }
 
@@ -248,7 +249,7 @@ const painClass = computed(() => {
 const isHighRisk = computed(() => form.value.painLevel >= 8)
 
 function submitCheck() {
-  if (!form.value.description.trim()) { alert('请填写症状描述'); return }
+  if (!form.value.description.trim()) { toast.warning('请填写症状描述'); return }
   loading.value = true
   result.value = ''
   currentReply = ''
