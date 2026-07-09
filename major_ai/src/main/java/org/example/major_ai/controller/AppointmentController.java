@@ -121,7 +121,11 @@ public class AppointmentController {
         }
 
         // 更新状态为已取消
-        appointmentService.updateStatus(id, "CANCELLED");
-        return ApiResponse.success("预约已取消", null);
+        try {
+            appointmentService.updateStatus(id, "CANCELLED");
+            return ApiResponse.success("预约已取消", null);
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(400, e.getMessage());
+        }
     }
 }
