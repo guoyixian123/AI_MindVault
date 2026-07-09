@@ -83,7 +83,7 @@
       </div>
 
       <!-- 对话记录 -->
-      <div v-if="messages.length" class="result-card">
+      <div v-if="messages.length || loading" class="result-card">
         <div class="result-header">
           <h3>查询结果</h3>
           <button class="copy-btn" @click="copyResult" title="复制">
@@ -216,7 +216,6 @@ function callApi(body) {
   resetStreaming()
 
   const userMsg = body.medicineName || (body.medicineNames ? body.medicineNames.join(' + ') : '')
-  messages.value.push({ role: 'user', content: `[${mode.value}] ${userMsg}` })
 
   chatWs.send('', {
     memoryId: sessionId,

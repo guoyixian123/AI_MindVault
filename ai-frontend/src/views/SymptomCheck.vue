@@ -258,8 +258,7 @@ function submitCheck() {
   step.value = 4
 
   // 记录用户消息
-  const userMsg = `[症状自查] ${form.value.category} - ${form.value.description}`
-  messages.value.push({ role: 'user', content: userMsg })
+  const userMsg = `${form.value.category}：${form.value.description}`
 
   chatWs.send('', {
     memoryId: sessionId,

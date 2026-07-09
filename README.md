@@ -1,12 +1,37 @@
 # AI_MindVault - 医疗健康智能问诊助手
 
-基于 LangChain4j + RAG 的医疗健康智能问诊系统，AI 顾问 **A.R.I.A**（Advanced Responsive Intelligent Advisor）提供专业、通俗的健康咨询服务，支持流式输出、会话管理、知识库检索、预约挂号、社区问诊等功能。
+基于 LangChain4j + RAG 的医疗健康智能问诊系统，AI 顾问 **A.R.I.A**（Advanced Responsive Intelligent Advisor）提供专业、通俗的健康咨询服务，支持 HTTP 流式输出、Redis 会话记忆、RAG 知识库检索、预约挂号、社区问诊等功能。
 
 ## 系统架构
 
-![系统整体架构图](print/01_系统整体架构图.png)
+```
+                   ┌─────────────┐
+                   │  前端 Vue 3  │
+                   └──────┬──────┘
+                          │ HTTP POST /api/chat/stream
+                          ▼
+                   ┌──────────────┐
+                   │ ChatController│
+                   └──────┬───────┘
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │  ConsultantService    │
+              │     (@AiService)      │
+              └──┬────────┬──────────┘
+                 │        │        │
+    ┌────────────┘        │        └────────────┐
+    ▼                     ▼                     ▼
+┌──────────┐    ┌─────────────────┐    ┌──────────────┐
+│  Redis   │    │  RAG 向量检索    │    │  Qwen API    │
+│ (会话记忆)│    │ (Redis 向量库)   │    │  (DashScope)  │
+└──────────┘    └────────▲────────┘    └──────────────┘
+                         │
+              启动时加载  │  content/*.txt
+              分块+向量化 │  知识库文档
+```
 
-> 更多架构图与流程图见下方 [📄 架构与流程图](#架构与流程图) 章节。
+> 系统整体架构图和业务流程图见 [📄 架构与流程图](#架构与流程图) 章节（基于早期版本，仅供参考）。
 
 ## 功能概览
 
@@ -20,7 +45,7 @@
 | 🔍 症状自查 | 多部位症状分析、多维度信息采集、风险分级判断（绿/黄/红） |
 | 📋 健康档案 | 个人健康档案管理、日常健康数据记录（血压/血糖/步数/睡眠） |
 | 📊 体检报告 | 上传体检报告，AI 自动解读分析 |
-| 🏥 预约挂号 | 按科室预约，选择医生和时间 |
+| 🏥 预约挂号 | 按科室预约，选择日期和时段（明日~30天内） |
 | 💬 社区问诊 | 发布健康问题，医生在线回复 |
 | 📁 慢病管理 | 慢性病专项档案（糖尿病/高血压/痛风等），指标趋势追踪 |
 
@@ -44,12 +69,12 @@
 | 数据库 | MySQL 8.0+ |
 | 缓存/向量库 | Redis Stack（支持向量存储） |
 | 认证 | Spring Security + JWT |
-| 流式传输 | WebSocket + WebFlux (Flux\<String\>) |
-| 前端框架 | Vue 3 (Composition API) + Vite 8 |
+| 流式传输 | WebFlux (Flux\<String\>) + Fetch ReadableStream |
+| 前端框架 | Vue 3 (Composition API) + Vite 6 |
 | 状态管理 | Pinia |
 | 路由 | Vue Router 4 |
 | HTTP 客户端 | Axios |
-| 可视化 | Chart.js + Three.js |
+| 可视化 | Chart.js |
 
 ## 环境要求
 
@@ -246,14 +271,14 @@ AI_MindVault/
 │       ├── java/org/example/major_ai/
 │       │   ├── MajorAiApplication.java    # 启动类
 │       │   ├── aiservice/                 # LangChain4j AI 服务接口
-│       │   ├── config/                    # 配置类（RAG、WebSocket、Security）
-│       │   ├── controller/                # REST 接口
-│       │   ├── handler/                   # WebSocket 消息处理器
+│       │   ├── chatMemoryStore/            # Redis 聊天记忆存储
+│       │   ├── config/                    # 配置类（RAG、Security）
+│       │   ├── controller/                # REST 接口（14 个 Controller）
 │       │   ├── security/                  # JWT 认证、安全配置
-│       │   ├── entity/                    # 数据库实体类
-│       │   ├── mapper/                    # MyBatis Mapper 接口
-│       │   ├── service/                   # 业务逻辑层
-│       │   └── dto/                       # 请求/响应 DTO
+│       │   ├── entity/                    # 数据库实体类（14 个）
+│       │   ├── mapper/                    # MyBatis Mapper 接口（12 个）
+│       │   ├── service/                   # 业务逻辑层（10 个）
+│       │   └── dto/                       # 请求/响应 DTO（5 个）
 │       └── resources/
 │           ├── application.yml.example    # 配置模板
 │           ├── schema.sql                 # 数据库建表 SQL
@@ -269,12 +294,15 @@ AI_MindVault/
 │       ├── stores/auth.js             # Pinia 认证状态管理
 │       ├── utils/
 │       │   ├── api.js                 # Axios 实例（JWT 拦截器）
-│       │   └── websocket.js           # WebSocket 客户端
+│       │   ├── streaming.js           # HTTP 流式请求客户端
+│       │   ├── websocket.js           # WebSocket 客户端（已废弃）
+│       │   └── markedConfig.js        # Markdown 渲染配置
 │       ├── composables/
-│       │   └── useStreamingText.js    # 流式文字显示
-│       ├── views/                     # 用户端页面（15+）
-│       ├── views/admin/               # 管理端页面（5）
-│       └── components/                # 通用组件
+│       │   └── useStreamingText.js    # 流式逐字显示
+│       ├── views/                     # 用户端页面（15 个）
+│       ├── views/admin/               # 管理端页面（5 个）
+│       ├── components/                # 通用组件（3 个）
+│       └── styles/                    # 全局样式
 │
 └── .uploads/                          # 文件上传目录
 ```
@@ -295,58 +323,38 @@ AI_MindVault/
 | `consultation_post` | 社区问诊帖子 |
 | `doctor_reply` | 医生回复 |
 | `appointment` | 预约挂号 |
-| `knowledge_document` | 知识库文档元数据 |
 
 ## 架构与流程图
 
-<details open>
+> ⚠️ **注意**：以下架构图基于早期 WebSocket 版本绘制，部分细节（如 AI 问诊已改为 HTTP Fetch 流式）与当前代码不一致，仅供参考整体业务逻辑。流程图仍保留在 `print/` 目录中。
+
+<details>
 <summary><b>🏗️ 系统架构与安全</b></summary>
 
-#### 用户认证流程
-![用户认证流程](print/02_用户认证流程.png)
-
-#### 安全认证架构设计
-![安全认证架构](print/11_安全认证架构.png)
-
-#### 前端路由守卫流程
-![前端路由守卫](print/12_前端路由守卫流程.png)
+- 用户认证流程
+- 安全认证架构设计
+- 前端路由守卫流程
 
 </details>
 
 <details>
 <summary><b>🩺 核心业务流程</b></summary>
 
-#### AI 问诊核心流程
-![AI 问诊核心流程](print/03_AI问诊核心流程.png)
-
-#### 症状自查流程
-![症状自查流程](print/04_症状自查流程.png)
-
-#### 用药咨询流程
-![用药咨询流程](print/05_用药咨询流程.png)
-
-#### 预约挂号流程
-![预约挂号流程](print/06_预约挂号流程.png)
-
-#### 社区问诊流程
-![社区问诊流程](print/07_社区问诊流程.png)
-
-#### 健康档案管理流程
-![健康档案管理](print/08_健康档案管理流程.png)
-
-#### 管理后台功能流程
-![管理后台功能](print/09_管理后台功能流程.png)
+- AI 问诊核心流程（已改为 HTTP 流式）
+- 症状自查流程
+- 用药咨询流程
+- 预约挂号流程
+- 社区问诊流程
+- 健康档案管理流程
+- 管理后台功能流程
 
 </details>
 
 <details>
 <summary><b>🗄️ AI 与数据架构</b></summary>
 
-#### RAG 知识库构建流程
-![RAG 知识库构建](print/10_RAG知识库构建流程.png)
-
-#### 数据库 ER 关系图（英文）
-![数据库 ER 图（英文）](print/14_数据库ER关系图_英文.png)
+- RAG 知识库构建流程
+- 数据库 ER 关系图（英文）
 
 </details>
 
@@ -370,7 +378,7 @@ redis-cli MODULE LIST
 
 ### Q: 如何添加自定义 RAG 知识库？
 
-将 `.txt` 文件放入 `major_ai/src/main/resources/content/` 目录，重启后端即可自动加载。文件会被分块（500 字符/块，100 字符重叠）并存入 Redis 向量库。
+将 `.txt` 文件放入 `major_ai/src/main/resources/content/` 目录，设置 `knowledge.auto-load-on-startup: true`，重启后端即可自动加载。文件会被分块（500 字符/块，100 字符重叠）并存入 Redis 向量库。
 
 ### Q: 前端请求 403 / CORS 错误？
 

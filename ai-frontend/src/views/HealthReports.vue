@@ -44,7 +44,7 @@
       </div>
 
       <!-- 对话记录 -->
-      <div v-if="messages.length" class="section-card result-card">
+      <div v-if="messages.length || analyzing" class="section-card result-card">
         <div class="result-header">
           <h2>AI 解读结果</h2>
           <button class="copy-btn" @click="copyResult" title="复制">
@@ -203,7 +203,6 @@ async function analyzeReport() {
   sessionId = 'report-' + Date.now()
   resetStreaming()
 
-  messages.value.push({ role: 'user', content: `[体检报告] ${reportType.value}` })
 
   try {
     const uploadRes = await api.post('/api/health/reports/upload', {

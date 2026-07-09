@@ -70,12 +70,13 @@ public class ChatController {
                 sessionInfo = chatSessionService.getSession(memoryId);
             }
 
-            String saveMessage = userMessage.isBlank() ? "[" + scenario + "查询]" : userMessage;
+            String saveMessage = userMessage.isBlank()
+                    ? buildHistoryLabel(scenario, json)
+                    : userMessage;
             chatMessageService.saveMessage(memoryId, "user", saveMessage);
 
             if (sessionInfo != null && "新对话".equals(sessionInfo.getTitle())) {
-                String title = saveMessage.substring(0, Math.min(20, saveMessage.length()));
-                if (saveMessage.length() > 20) title += "...";
+                String title = buildSessionTitle(scenario, json);
                 chatSessionService.updateSessionTitle(memoryId, title);
             }
 
@@ -151,6 +152,73 @@ public class ChatController {
      * Redis 中存储的是 LangChain4j 管理的真实对话（原始 prompt + AI 回复），
      * 比 MySQL 中的标签更准确
      */
+    /**
+     * 为初始查询构建有意义的历史记录标签（替代丑陋的 [xxx查询]）
+     */
+    private String buildSessionTitle(String scenario, JsonNode json) {
+        return switch (scenario) {
+            case "medicine" -> {
+                String sub = json.has("subScenario") ? json.get("subScenario").asText() : "query";
+                yield switch (sub) {
+                    case "query" -> "药品查询";
+                    case "interaction" -> "联用检测";
+                    case "special" -> "特殊人群用药";
+                    case "emergency" -> "应急处理";
+                    default -> "用药咨询";
+                };
+            }
+            case "disease" -> {
+                String sub = json.has("subScenario") ? json.get("subScenario").asText() : "knowledge";
+                yield switch (sub) {
+                    case "knowledge" -> "疾病科普";
+                    case "compare" -> "病症鉴别";
+                    case "debunk" -> "谣言辟谣";
+                    default -> "疾病查询";
+                };
+            }
+            case "symptom" -> "症状自查";
+            case "report" -> "体检报告";
+            default -> "AI 对话";
+        };
+    }
+
+    private String buildHistoryLabel(String scenario, JsonNode json) {
+        return switch (scenario) {
+            case "medicine" -> {
+                String sub = json.has("subScenario") ? json.get("subScenario").asText() : "query";
+                String name = json.has("medicineName") ? json.get("medicineName").asText() : "";
+                String type = switch (sub) {
+                    case "query" -> "药品查询";
+                    case "interaction" -> "联用检测";
+                    case "special" -> "特殊人群用药";
+                    case "emergency" -> "应急处理";
+                    default -> "用药咨询";
+                };
+                yield name.isBlank() ? type : type + "：" + name;
+            }
+            case "disease" -> {
+                String sub = json.has("subScenario") ? json.get("subScenario").asText() : "knowledge";
+                String name = json.has("diseaseName") ? json.get("diseaseName").asText() : "";
+                String type = switch (sub) {
+                    case "knowledge" -> "疾病科普";
+                    case "compare" -> "病症鉴别";
+                    case "debunk" -> "谣言辟谣";
+                    default -> "疾病查询";
+                };
+                yield name.isBlank() ? type : type + "：" + name;
+            }
+            case "symptom" -> {
+                String category = json.has("category") ? json.get("category").asText() : "";
+                yield category.isBlank() ? "症状自查" : "症状自查：" + category;
+            }
+            case "report" -> {
+                String rt = json.has("reportType") ? json.get("reportType").asText() : "体检报告";
+                yield "体检报告：" + rt;
+            }
+            default -> "AI 对话";
+        };
+    }
+
     private String buildFollowUpPrompt(String memoryId, String userMessage) {
         List<ChatMessage> messages = chatMemoryStore.getMessages(memoryId);
 
